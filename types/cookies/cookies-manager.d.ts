@@ -1,0 +1,23 @@
+export const __esModule: boolean;
+export function getDB(filePath: any, readOnly?: boolean): Promise<_sqlite.Database<import("sqlite3").Database, import("sqlite3").Statement>>;
+export function getChunckedInsertValues(cookiesArr: any): any[][];
+export function loadCookiesFromFile(filePath: any): Promise<{
+    url: string;
+    domain: any;
+    name: any;
+    value: any;
+    path: any;
+    sameSite: any;
+    secure: boolean;
+    httpOnly: boolean;
+    hostOnly: boolean;
+    session: boolean;
+    expirationDate: any;
+    creationDate: any;
+}[]>;
+export function unixToLDAP(unixtime: any): any;
+export function ldapToUnix(ldap: any): any;
+export function buildCookieURL(domain: any, secure: any, path: any): string;
+export function chunk(arr: any, chunkSize?: number, cache?: any[]): any[];
+export function getCookiesFilePath(profileId: any, tmpdir: any): Promise<any>;
+import _sqlite = require("sqlite");

@@ -1,0 +1,17 @@
+{
+  "plugins": [
+    [
+      "@babel/plugin-transform-modules-commonjs",
+      {
+        "importInterop": "babel"
+      }
+    ],
+    [
+      "babel-plugin-transform-import-meta"
+    ]
+  ],
+  "ignore": [
+    "node_modules",
+    "dist"
+  ]
+}

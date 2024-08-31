@@ -1,9 +1,9 @@
 {
-  "name": "gologin-commonjs",
-  "version": "1.0.2",
-  "description": "A CommonJS Transpiled GoLogin API",
-  "types": "./types/gologin.d.ts",
-  "main": "./dist/src/gologin.js",
+  "name": "gologin",
+  "version": "2.1.1",
+  "description": "A high-level API to control Orbita browser over GoLogin API",
+  "types": "./index.d.ts",
+  "main": "./src/gologin.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gologinapp/gologin.git"
@@ -11,7 +11,8 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "author": "Muhammad Farid Fadhlan",
+  "type": "module",
+  "author": "The GoLogin Authors",
   "license": "GPL-3.0",
   "dependencies": {
     "adm-zip": "^0.5.1",
@@ -20,7 +21,6 @@
     "decompress": "^4.2.1",
     "decompress-unzip": "^4.0.1",
     "form-data": "^3.0.0",
-    "gologin": "^2.1.1",
     "progress": "^2.0.3",
     "puppeteer-core": "^2.1.1",
     "request": "^2.88.2",
@@ -30,14 +30,16 @@
     "sqlite": "^4.0.23",
     "sqlite3": "^5.0.2"
   },
+  "bugs": {
+    "url": "https://github.com/gologinapp/gologin/issues"
+  },
+  "homepage": "https://github.com/gologinapp/gologin#readme",
+  "directories": {
+    "example": "examples"
+  },
   "devDependencies": {
-    "@babel/cli": "^7.25.6",
-    "@babel/core": "^7.25.2",
-    "@babel/plugin-transform-modules-commonjs": "^7.24.8",
-    "babel-plugin-transform-import-meta": "^2.2.1",
     "eslint": "^8.21.0",
-    "eslint-plugin-simple-import-sort": "^8.0.0",
-    "typescript": "^5.5.4"
+    "eslint-plugin-simple-import-sort": "^8.0.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
