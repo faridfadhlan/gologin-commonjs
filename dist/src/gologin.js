@@ -222,9 +222,9 @@ class GoLogin {
   }
   async emptyProfileFolder() {
     debug('get emptyProfileFolder');
-    const currentDir = (0, _path.dirname)(new URL(require('url').pathToFileURL(__filename).toString()).pathname);
+    const currentDir = (0, _path.dirname)(__filename);
     const zeroProfilePath = (0, _path.join)(currentDir, '..', 'zero_profile.zip');
-    const profile = await readFile((0, _path.resolve)(zeroProfilePath));
+    const profile = await readFile(zeroProfilePath);
     debug('emptyProfileFolder LENGTH ::', profile.length);
     return profile;
   }
