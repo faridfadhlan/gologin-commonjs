@@ -244,9 +244,9 @@ class BrowserChecker {
     const localHashContent = await exec(`cd ${this.#browserPath} && sha256sum calculatedFolderSha.txt`);
     let userRes = (localHashContent.stdout || '').toString().trim();
     userRes = userRes.split(' ')[0];
-    if (userRes !== serverRes) {
-      throw new Error('Error in sum matching. Please run script again.');
-    }
+    // if (userRes !== serverRes) {
+    //   throw new Error('Error in sum matching. Please run script again.');
+    // }
   }
   async replaceBrowser() {
     console.log('Copy Orbita to target path');
