@@ -85,22 +85,24 @@ class BrowserChecker {
     if (autoUpdateBrowser) {
       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
     }
-    return new Promise(resolve => {
-      const rl = (0, _readline.createInterface)(process.stdin, process.stdout);
-      const timeout = setTimeout(() => {
-        console.log(`\nContinue with current ${currentVersion} version.`);
-        resolve();
-      }, 10000);
-      rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, answer => {
-        clearTimeout(timeout);
-        rl.close();
-        if (answer && answer[0].toString().toLowerCase() === 'y') {
-          return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
-        }
-        console.log(`Continue with current ${currentVersion} version.`);
-        resolve();
-      });
-    });
+    console.log(`New Orbita ${browserLatestVersion} is available.`)
+    return;
+    // return new Promise(resolve => {
+    //   const rl = (0, _readline.createInterface)(process.stdin, process.stdout);
+    //   const timeout = setTimeout(() => {
+    //     console.log(`\nContinue with current ${currentVersion} version.`);
+    //     resolve();
+    //   }, 10000);
+    //   rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, answer => {
+    //     clearTimeout(timeout);
+    //     rl.close();
+    //     if (answer && answer[0].toString().toLowerCase() === 'y') {
+    //       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
+    //     }
+    //     console.log(`Continue with current ${currentVersion} version.`);
+    //     resolve();
+    //   });
+    // });
   }
   async downloadBrowser(latestVersion, browserDownloadUrl) {
     await this.deleteOldArchives(true);
