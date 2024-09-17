@@ -622,11 +622,27 @@ class GoLogin {
         maxAttempts: 5
       });
     } else {
-      return 'Asia/Jakarta';
-      // data = await _requestretry.default.get(TIMEZONE_URL, {
-      //   timeout: 20 * 1000,
-      //   maxAttempts: 5
-      // });
+      try {
+        data = await _requestretry.default.get(TIMEZONE_URL, {
+          timeout: 20 * 1000,
+          maxAttempts: 2
+        });
+      } catch {
+        data = {
+          body: JSON.stringify({
+            country: "ID",
+            stateProv: "Jakarta",
+            city: "Jakarta",
+            timezone: "Asia/Jakarta",
+            ll: [
+                "-6.21140",
+                "106.84460"
+            ],
+            languages: "id",
+            accuracy: 100
+          })
+        }
+      }
     }
     debug('getTimeZone finish', data.body);
     this._tz = JSON.parse(data.body);
