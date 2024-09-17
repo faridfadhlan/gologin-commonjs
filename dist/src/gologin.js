@@ -622,10 +622,11 @@ class GoLogin {
         maxAttempts: 5
       });
     } else {
-      data = await _requestretry.default.get(TIMEZONE_URL, {
-        timeout: 20 * 1000,
-        maxAttempts: 5
-      });
+      return 'Asia/Jakarta';
+      // data = await _requestretry.default.get(TIMEZONE_URL, {
+      //   timeout: 20 * 1000,
+      //   maxAttempts: 5
+      // });
     }
     debug('getTimeZone finish', data.body);
     this._tz = JSON.parse(data.body);

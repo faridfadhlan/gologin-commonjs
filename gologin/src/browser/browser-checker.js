@@ -72,35 +72,37 @@ export class BrowserChecker {
       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
     }
 
-    const currentVersionReq = await this.getCurrentVersion();
-    const currentVersion = (currentVersionReq?.stdout || '').replace(/(\r\n|\n|\r)/gm, '');
+    return;
 
-    if (browserLatestVersion === currentVersion || !checkBrowserUpdate) {
-      return;
-    }
+    // const currentVersionReq = await this.getCurrentVersion();
+    // const currentVersion = (currentVersionReq?.stdout || '').replace(/(\r\n|\n|\r)/gm, '');
 
-    if (autoUpdateBrowser) {
-      return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
-    }
+    // if (browserLatestVersion === currentVersion || !checkBrowserUpdate) {
+    //   return;
+    // }
 
-    return new Promise(resolve => {
-      const rl = createInterface(process.stdin, process.stdout);
-      const timeout = setTimeout(() => {
-        console.log(`\nContinue with current ${currentVersion} version.`);
-        resolve();
-      }, 10000);
+    // if (autoUpdateBrowser) {
+    //   return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
+    // }
 
-      rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, (answer) => {
-        clearTimeout(timeout);
-        rl.close();
-        if (answer && answer[0].toString().toLowerCase() === 'y') {
-          return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
-        }
+    // return new Promise(resolve => {
+    //   const rl = createInterface(process.stdin, process.stdout);
+    //   const timeout = setTimeout(() => {
+    //     console.log(`\nContinue with current ${currentVersion} version.`);
+    //     resolve();
+    //   }, 10000);
 
-        console.log(`Continue with current ${currentVersion} version.`);
-        resolve();
-      });
-    });
+    //   rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, (answer) => {
+    //     clearTimeout(timeout);
+    //     rl.close();
+    //     if (answer && answer[0].toString().toLowerCase() === 'y') {
+    //       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
+    //     }
+
+    //     console.log(`Continue with current ${currentVersion} version.`);
+    //     resolve();
+    //   });
+    // });
   }
 
   async downloadBrowser(latestVersion, browserDownloadUrl) {
