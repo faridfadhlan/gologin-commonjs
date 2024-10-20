@@ -827,14 +827,14 @@ class GoLogin {
         maxAttempts: 5,
       });
     } else {
-      const t = this.randomGeo(glat, glong, 10);
+      const t = this.randomGeo(-6.1864688, 106.829637, 10);
       data = {
         body: JSON.stringify({
           country: "ID",
           stateProv: "Jakarta",
           city: "Jakarta",
           timezone: "Asia/Jakarta",
-          ll: [t.latitude, t.longitude],
+          ll: [t.latitude.toString(), t.longitude.toString()],
           languages: "id",
           accuracy: 100,
         }),
