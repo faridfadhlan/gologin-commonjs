@@ -827,7 +827,7 @@ class GoLogin {
         maxAttempts: 5,
       });
     } else {
-      const t = randomGeo(glat, glong, 10);
+      const t = this.randomGeo(glat, glong, 10);
       data = {
         body: JSON.stringify({
           country: "ID",
