@@ -12,7 +12,7 @@ function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e
 const {
   access
 } = _fs.promises;
-const archiveProfile = async (profileFolder = '', tryAgain = true) => {
+const archiveProfile = async (profileFolder = '') => {
   const folderExists = await access(profileFolder).then(() => true, () => false);
   if (!folderExists) {
     throw new Error('Invalid profile folder path: ' + profileFolder);
@@ -27,9 +27,8 @@ const archiveProfile = async (profileFolder = '', tryAgain = true) => {
   const dirsToRemove = (0, _profileDirectoriesToRemove.getDirectoriesForArchiver)();
   dirsToRemove.forEach(entry => archive.deleteFile(entry));
   const archiveIsValid = checkProfileArchiveIsValid(archive);
-  if (tryAgain && !archiveIsValid) {
-    await new Promise(r => setTimeout(() => r(), 300));
-    return archiveProfile(profileFolder, false);
+  if (!archiveIsValid) {
+    throw new Error('Archive is not valid');
   }
   return new Promise((resolve, reject) => archive.toBuffer(resolve, reject));
 };

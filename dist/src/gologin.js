@@ -41,12 +41,16 @@ var _common = require("./utils/common.js");
 var _constants = require("./utils/constants.js");
 var _utils2 = require("./utils/utils.js");
 var _gologinApi = require("./gologin-api.js");
+var _zeroProfileBookmarks = require("./utils/zero-profile-bookmarks.js");
+var _zeroProfilePreferences = require("./utils/zero-profile-preferences.js");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const {
   access,
   unlink,
   writeFile,
-  readFile
+  readFile,
+  mkdir,
+  copyFile
 } = _fs.promises;
 const SEPARATOR = _path.sep;
 const OS_PLATFORM = process.platform;
@@ -57,7 +61,6 @@ const delay = time => new Promise(resolve => setTimeout(resolve, time));
 class GoLogin {
   constructor(options = {}) {
     this.browserLang = 'en-US';
-    this.is_remote = options.remote || false;
     this.access_token = options.token;
     this.profile_id = options.profile_id;
     this.password = options.password;
@@ -70,8 +73,9 @@ class GoLogin {
     this.differentOs = false;
     this.profileOs = 'lin';
     this.waitWebsocket = options.waitWebsocket ?? true;
+    this.isEmptyFonts = false;
+    this.isFirstSession = false;
     this.isCloudHeadless = options.isCloudHeadless ?? true;
-    this.isNewCloudBrowser = options.isNewCloudBrowser ?? true;
     this.tmpdir = (0, _os.tmpdir)();
     this.autoUpdateBrowser = !!options.autoUpdateBrowser;
     this.checkBrowserUpdate = options.checkBrowserUpdate ?? true;
@@ -82,7 +86,7 @@ class GoLogin {
     this.timezone = options.timezone;
     this.extensionPathsToInstall = [];
     this.customArgs = options.args || [];
-    this.restoreLastSession = options.restoreLastSession || false;
+    this.restoreLastSession = options.restoreLastSession || true;
     this.processSpawned = null;
     this.processKillTimeout = 1 * 1000;
     if (options.tmpdir) {
@@ -144,7 +148,7 @@ class GoLogin {
   async getProfile(profile_id) {
     const id = profile_id || this.profile_id;
     debug('getProfile', this.access_token, id);
-    const profileResponse = await _requestretry.default.get(`${_common.API_URL}/browser/${id}`, {
+    const profileResponse = await _requestretry.default.get(`${_common.API_URL}/browser/features/${id}/info-for-run`, {
       headers: {
         'Authorization': `Bearer ${this.access_token}`,
         'User-Agent': 'gologin-api'
@@ -176,26 +180,23 @@ class GoLogin {
   async emptyProfile() {
     return readFile((0, _path.resolve)(__dirname, 'gologin_zeroprofile.b64')).then(res => res.toString());
   }
-  async getProfileS3(s3path) {
-    if (!s3path) {
-      throw new Error('s3path not found');
-    }
+  async getProfileS3() {
     const token = this.access_token;
-    debug('getProfileS3 token=', token, 'profile=', this.profile_id, 's3path=', s3path);
+    debug('getProfileS3 token=', token, 'profile=', this.profile_id);
     const downloadURL = `${_constants.STORAGE_GATEWAY_BASE_URL}/download`;
     debug('loading profile from public s3 bucket, url=', downloadURL);
-    const profileResponse = await _requestretry.default.get(downloadURL, {
-      encoding: null,
+    const profileResponse = await fetch(downloadURL, {
       headers: {
         Authorization: `Bearer ${token}`,
         browserId: this.profile_id
       }
     });
-    if (profileResponse.statusCode !== 200) {
+    const profileResponseBody = await profileResponse.arrayBuffer();
+    if (profileResponse.status !== 200) {
       debug(`Gologin S3 BUCKET ${downloadURL} response error ${profileResponse.statusCode}  - use empty`);
       return '';
     }
-    return Buffer.from(profileResponse.body);
+    return Buffer.from(profileResponseBody);
   }
   async postFile(fileName, fileBuff) {
     debug('POSTING FILE', fileBuff.length);
@@ -222,9 +223,9 @@ class GoLogin {
   }
   async emptyProfileFolder() {
     debug('get emptyProfileFolder');
-    const currentDir = (0, _path.dirname)(__filename);
+    const currentDir = (0, _path.dirname)(new URL(require('url').pathToFileURL(__filename).toString()).pathname);
     const zeroProfilePath = (0, _path.join)(currentDir, '..', 'zero_profile.zip');
-    const profile = await readFile(zeroProfilePath);
+    const profile = await readFile((0, _path.resolve)(zeroProfilePath));
     debug('emptyProfileFolder LENGTH ::', profile.length);
     return profile;
   }
@@ -306,42 +307,17 @@ class GoLogin {
       filter: file => !file.path.endsWith('/')
     });
   }
-  async createStartup(local = false) {
-    const profilePath = (0, _path.join)(this.tmpdir, `gologin_profile_${this.profile_id}`);
-    let profile;
+  async downloadProfileAndExtract(profile, local) {
     let profile_folder;
-    await (0, _rimraf.default)(profilePath, () => null);
-    debug('-', profilePath, 'dropped');
-    profile = await this.getProfile();
-    const {
-      navigator = {},
-      fonts,
-      os: profileOs
-    } = profile;
-    this.fontsMasking = fonts?.enableMasking;
-    this.profileOs = profileOs;
-    this.differentOs = profileOs !== 'android' && (OS_PLATFORM === 'win32' && profileOs !== 'win' || OS_PLATFORM === 'darwin' && profileOs !== 'mac' || OS_PLATFORM === 'linux' && profileOs !== 'lin');
-    const {
-      resolution = '1920x1080',
-      language = 'en-US,en;q=0.9'
-    } = navigator;
-    this.language = language;
-    const [screenWidth, screenHeight] = resolution.split('x');
-    this.resolution = {
-      width: parseInt(screenWidth, 10),
-      height: parseInt(screenHeight, 10)
-    };
+    const profilePath = (0, _path.join)(this.tmpdir, `gologin_profile_${this.profile_id}`);
     const profileZipExists = await access(this.profile_zip_path).then(() => true).catch(() => false);
     if (!(local && profileZipExists)) {
       try {
-        profile_folder = await this.getProfileS3((0, _utils2.get)(profile, 's3Path', ''));
+        profile_folder = await this.getProfileS3();
       } catch (e) {
         debug('Cannot get profile - using empty', e);
       }
       debug('FILE READY', this.profile_zip_path);
-      if (!profile_folder.length) {
-        profile_folder = await this.emptyProfileFolder();
-      }
       await writeFile(this.profile_zip_path, profile_folder);
       debug('PROFILE LENGTH', profile_folder.length);
     } else {
@@ -364,14 +340,62 @@ class GoLogin {
       await unlink(singletonLockPath);
       debug('SingletonLock removed');
     }
+  }
+  async createZeroProfile(createCookiesTableQuery) {
+    const profilePath = (0, _path.join)(this.tmpdir, `gologin_profile_${this.profile_id}`);
+    const defaultFilePath = (0, _path.resolve)(profilePath, 'Default');
+    const preferencesFilePath = (0, _path.resolve)(defaultFilePath, 'Preferences');
+    const bookmarksFilePath = (0, _path.resolve)(defaultFilePath, 'Bookmarks');
+    const cookiesFilePath = (0, _path.resolve)(defaultFilePath, 'Network', 'Cookies');
+    const cookiesFileSecondPath = (0, _path.resolve)(defaultFilePath, 'Cookies');
+    await mkdir((0, _path.resolve)(defaultFilePath, 'Network'), {
+      recursive: true
+    }).catch(console.log);
+    await Promise.all([writeFile(preferencesFilePath, JSON.stringify(_zeroProfilePreferences.zeroProfilePreferences), {
+      mode: 0o666
+    }), writeFile(bookmarksFilePath, JSON.stringify(_zeroProfileBookmarks.zeroProfileBookmarks), {
+      mode: 0o666
+    }), (0, _cookiesManager.createDBFile)({
+      cookiesFilePath,
+      cookiesFileSecondPath,
+      createCookiesTableQuery
+    })]);
+  }
+  async createStartup(local = false) {
+    const profilePath = (0, _path.join)(this.tmpdir, `gologin_profile_${this.profile_id}`);
+    await (0, _rimraf.default)(profilePath, () => null);
+    debug('-', profilePath, 'dropped');
+    const profile = await this.getProfile();
+    const {
+      navigator = {},
+      fonts,
+      os: profileOs
+    } = profile;
+    this.fontsMasking = fonts?.enableMasking;
+    this.profileOs = profileOs;
+    this.differentOs = profileOs !== 'android' && (OS_PLATFORM === 'win32' && profileOs !== 'win' || OS_PLATFORM === 'darwin' && profileOs !== 'mac' || OS_PLATFORM === 'linux' && profileOs !== 'lin');
+    const {
+      resolution = '1920x1080',
+      language = 'en-US,en;q=0.9'
+    } = navigator;
+    this.language = language;
+    const [screenWidth, screenHeight] = resolution.split('x');
+    this.resolution = {
+      width: parseInt(screenWidth, 10),
+      height: parseInt(screenHeight, 10)
+    };
+    if (profile.storageInfo.isNewProfile) {
+      this.isFirstSession = true;
+      await this.createZeroProfile(profile.createCookiesTableQuery);
+    } else {
+      this.isFirstSession = false;
+      await this.downloadProfileAndExtract(profile, local);
+    }
     const pref_file_name = (0, _path.join)(profilePath, 'Default', 'Preferences');
     debug('reading', pref_file_name);
     const prefFileExists = await access(pref_file_name).then(() => true).catch(() => false);
     if (!prefFileExists) {
       debug('Preferences file not exists waiting', pref_file_name, '. Using empty profile');
-      profile_folder = await this.emptyProfileFolder();
-      await writeFile(this.profile_zip_path, profile_folder);
-      await this.extractProfile(profilePath, this.profile_zip_path);
       await writeFile(pref_file_name, '{}');
     }
     const preferences_raw = await readFile(pref_file_name);
@@ -445,7 +469,7 @@ class GoLogin {
     this.proxy = proxy;
     await this.getTimeZone(proxy).catch(e => {
       console.error('Proxy Error. Check it and try again.');
-      throw e;
+      throw new Error(`Proxy Error. ${e.message}`);
     });
     const [latitude, longitude] = this._tz.ll;
     const {
@@ -508,12 +532,12 @@ class GoLogin {
     debug('writeCookiesFromServer', this.writeCookiesFromServer);
     this.cookiesFilePath = await (0, _cookiesManager.getCookiesFilePath)(this.profile_id, this.tmpdir);
     if (this.writeCookiesFromServer) {
-      await this.writeCookiesToFile();
+      await this.writeCookiesToFile(profile.cookies?.cookies);
     }
     if (this.fontsMasking) {
       const families = fonts?.families || [];
       if (!families.length) {
-        throw new Error('No fonts list provided');
+        this.isEmptyFonts = true;
       }
       try {
         await (0, _browserUserDataManager.composeFonts)(families, profilePath, this.differentOs);
@@ -622,27 +646,10 @@ class GoLogin {
         maxAttempts: 5
       });
     } else {
-      try {
-        data = await _requestretry.default.get(TIMEZONE_URL, {
-          timeout: 20 * 1000,
-          maxAttempts: 2
-        });
-      } catch {
-        data = {
-          body: JSON.stringify({
-            country: "ID",
-            stateProv: "Jakarta",
-            city: "Jakarta",
-            timezone: "Asia/Jakarta",
-            ll: [
-                "-6.21140",
-                "106.84460"
-            ],
-            languages: "id",
-            accuracy: 100
-          })
-        }
-      }
+      data = await _requestretry.default.get(TIMEZONE_URL, {
+        timeout: 20 * 1000,
+        maxAttempts: 5
+      });
     }
     debug('getTimeZone finish', data.body);
     this._tz = JSON.parse(data.body);
@@ -772,7 +779,7 @@ class GoLogin {
         if (this.differentOs) {
           arg = '--font-masking-mode=3';
         }
-        if (this.profileOs === 'android') {
+        if (this.profileOs === 'android' || this.isEmptyFonts) {
           arg = '--font-masking-mode=1';
         }
         params.push(arg);
@@ -785,7 +792,7 @@ class GoLogin {
       if (Array.isArray(this.extra_params) && this.extra_params.length) {
         params = params.concat(this.extra_params);
       }
-      if (this.restoreLastSession) {
+      if (!this.isFirstSession && this.restoreLastSession) {
         params.push('--restore-last-session');
       }
       params.push(...new Set(customArgs));
@@ -827,10 +834,10 @@ class GoLogin {
     if (this.uploadCookiesToServer) {
       await this.uploadProfileCookiesToServer();
     }
-    await this.saveBookmarksToDb();
     this.is_stopping = true;
     await this.sanitizeProfile();
     if (is_posting) {
+      await this.saveBookmarksToDb();
       await this.commitProfile();
     }
     this.is_stopping = false;
@@ -1118,32 +1125,49 @@ class GoLogin {
     });
     return response.body;
   }
-  async writeCookiesToFile() {
-    const cookies = await this.getCookies(this.profile_id);
+  getCookiePath(defaultFilePath) {
+    let primary = (0, _path.join)(defaultFilePath, 'Cookies');
+    let secondary = (0, _path.join)(defaultFilePath, 'Network', 'Cookies');
+    if (!(0, _fs.existsSync)(primary)) {
+      primary = (0, _path.join)(defaultFilePath, 'Network', 'Cookies');
+      secondary = (0, _path.join)(defaultFilePath, 'Cookies');
+    }
+    return {
+      primary,
+      secondary
+    };
+  }
+  async writeCookiesToFile(cookies) {
+    if (!cookies) {
+      cookies = await this.getCookies(this.profile_id);
+    }
+    if (!cookies?.length) {
+      return;
+    }
     const resultCookies = cookies.map(el => ({
       ...el,
       value: Buffer.from(el.value)
     }));
     let db;
+    const profilePath = (0, _path.join)(this.tmpdir, `gologin_profile_${this.profile_id}`);
+    const defaultFilePath = (0, _path.resolve)(profilePath, 'Default');
+    const cookiesPaths = this.getCookiePath(defaultFilePath);
     try {
-      db = await (0, _cookiesManager.getDB)(this.cookiesFilePath, false);
-      if (resultCookies.length) {
-        const chunckInsertValues = (0, _cookiesManager.getChunckedInsertValues)(resultCookies);
+      db = await (0, _cookiesManager.getDB)(cookiesPaths.primary, false);
+      const cookiesToInsert = await (0, _cookiesManager.getUniqueCookies)(resultCookies, cookiesPaths.primary);
+      if (cookiesToInsert.length) {
+        const chunckInsertValues = (0, _cookiesManager.getChunckedInsertValues)(cookiesToInsert);
         for (const [query, queryParams] of chunckInsertValues) {
           const insertStmt = await db.prepare(query);
           await insertStmt.run(queryParams);
           await insertStmt.finalize();
         }
-      } else {
-        const query = 'delete from cookies';
-        const insertStmt = await db.prepare(query);
-        await insertStmt.run();
-        await insertStmt.finalize();
       }
     } catch (error) {
       console.log(error.message);
     } finally {
       db && (await db.close());
+      await copyFile(cookiesPaths.primary, cookiesPaths.secondary).catch(console.log);
     }
   }
   async uploadProfileCookiesToServer() {
@@ -1159,9 +1183,6 @@ class GoLogin {
     await (0, _browserApi.updateProfileBookmarks)([this.profile_id], this.access_token, bookmarks);
   }
   async start() {
-    if (this.is_remote) {
-      return this.startRemote();
-    }
     if (!this.executablePath) {
       await this.checkBrowser();
     }
@@ -1191,9 +1212,6 @@ class GoLogin {
   }
   async stop() {
     await new Promise(resolve => setTimeout(resolve, 500));
-    if (this.is_remote) {
-      return this.stopRemote();
-    }
     await this.stopAndCommit({
       posting: true
     }, false);
@@ -1232,83 +1250,9 @@ class GoLogin {
     wsUrl = wsUrl.replace('ws://', 'wss://').replace('127.0.0.1', remoteOrbitaUrlWithoutProtocol);
     return wsUrl;
   }
-  async startRemote(delay_ms = 10000) {
-    debug(`startRemote ${this.profile_id}`);
-
-    /*
-    if (profileResponse.statusCode !== 202) {
-      return {'status': 'failure', 'code':  profileResponse.statusCode};
-    }
-    */
-
-    const profile = await this.getProfile();
-    const profileResponse = await _requestretry.default.post(`${_common.API_URL}/browser/${this.profile_id}/web`, {
-      headers: {
-        'Authorization': `Bearer ${this.access_token}`,
-        'User-Agent': 'gologin-api'
-      },
-      json: {
-        isNewCloudBrowser: this.isNewCloudBrowser,
-        isHeadless: this.isCloudHeadless
-      }
-    }).catch(() => null);
-    if (!profileResponse) {
-      throw new Error('invalid request');
-    }
-    const {
-      body,
-      statusCode
-    } = profileResponse;
-    debug('profileResponse', statusCode, body);
-    if (profileResponse.statusCode === 401) {
-      throw new Error('invalid token');
-    }
-    if (body.status === 'profileStatuses.pending') {
-      return {
-        status: 'pending',
-        message: 'remote browser is being prepared, please try in 1 minute.'
-      };
-    }
-    let remoteOrbitaUrl = `https://${this.profile_id}.orbita.gologin.com`;
-    if (this.isNewCloudBrowser) {
-      if (!profileResponse.body.remoteOrbitaUrl) {
-        throw new Error('Couldn\' start the remote browser');
-      }
-      remoteOrbitaUrl = profileResponse.body.remoteOrbitaUrl;
-    }
-    const {
-      navigator = {},
-      fonts,
-      os: profileOs
-    } = profile;
-    this.fontsMasking = fonts?.enableMasking;
-    this.profileOs = profileOs;
-    this.differentOs = profileOs !== 'android' && (OS_PLATFORM === 'win32' && profileOs !== 'win' || OS_PLATFORM === 'darwin' && profileOs !== 'mac' || OS_PLATFORM === 'linux' && profileOs !== 'lin');
-    const {
-      resolution = '1920x1080',
-      language = 'en-US,en;q=0.9'
-    } = navigator;
-    this.language = language;
-    const [screenWidth, screenHeight] = resolution.split('x');
-    this.resolution = {
-      width: parseInt(screenWidth, 10),
-      height: parseInt(screenHeight, 10)
-    };
-    const wsUrl = await this.waitDebuggingUrl(delay_ms, 0, remoteOrbitaUrl);
-    if (wsUrl !== '') {
-      return {
-        status: 'success',
-        wsUrl
-      };
-    }
-    return {
-      status: 'failure',
-      message: body
-    };
-  }
   async stopRemote() {
     debug(`stopRemote ${this.profile_id}`);
-    const profileResponse = await _requestretry.default.delete(`${_common.API_URL}/browser/${this.profile_id}/web?isNewCloudBrowser=${this.isNewCloudBrowser}`, {
+    const profileResponse = await _requestretry.default.delete(`${_common.API_URL}/browser/${this.profile_id}/web`, {
       headers: {
         'Authorization': `Bearer ${this.access_token}`,
         'User-Agent': 'gologin-api'
@@ -1332,5 +1276,5 @@ class GoLogin {
     return (0, _browserApi.updateProfileProxy)(this.profile_id, this.access_token, proxyData);
   }
 }
-module.exports = GoLogin;
+exports.GoLogin = GoLogin;
 var _default = exports.default = GoLogin;

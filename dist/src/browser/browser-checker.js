@@ -85,24 +85,22 @@ class BrowserChecker {
     if (autoUpdateBrowser) {
       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
     }
-    console.log(`New Orbita ${browserLatestVersion} is available.`)
-    return;
-    // return new Promise(resolve => {
-    //   const rl = (0, _readline.createInterface)(process.stdin, process.stdout);
-    //   const timeout = setTimeout(() => {
-    //     console.log(`\nContinue with current ${currentVersion} version.`);
-    //     resolve();
-    //   }, 10000);
-    //   rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, answer => {
-    //     clearTimeout(timeout);
-    //     rl.close();
-    //     if (answer && answer[0].toString().toLowerCase() === 'y') {
-    //       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
-    //     }
-    //     console.log(`Continue with current ${currentVersion} version.`);
-    //     resolve();
-    //   });
-    // });
+    return new Promise(resolve => {
+      const rl = (0, _readline.createInterface)(process.stdin, process.stdout);
+      const timeout = setTimeout(() => {
+        console.log(`\nContinue with current ${currentVersion} version.`);
+        resolve();
+      }, 10000);
+      rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, answer => {
+        clearTimeout(timeout);
+        rl.close();
+        if (answer && answer[0].toString().toLowerCase() === 'y') {
+          return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
+        }
+        console.log(`Continue with current ${currentVersion} version.`);
+        resolve();
+      });
+    });
   }
   async downloadBrowser(latestVersion, browserDownloadUrl) {
     await this.deleteOldArchives(true);
@@ -246,9 +244,9 @@ class BrowserChecker {
     const localHashContent = await exec(`cd ${this.#browserPath} && sha256sum calculatedFolderSha.txt`);
     let userRes = (localHashContent.stdout || '').toString().trim();
     userRes = userRes.split(' ')[0];
-    // if (userRes !== serverRes) {
-    //   throw new Error('Error in sum matching. Please run script again.');
-    // }
+    if (userRes !== serverRes) {
+      throw new Error('Error in sum matching. Please run script again.');
+    }
   }
   async replaceBrowser() {
     console.log('Copy Orbita to target path');

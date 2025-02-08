@@ -1,1 +1,4 @@
 node_modules/
+dist-old
+gologin-old
+.DS_Store

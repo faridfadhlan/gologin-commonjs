@@ -3,11 +3,11 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.unixToLDAP = exports.loadCookiesFromFile = exports.ldapToUnix = exports.getDB = exports.getCookiesFilePath = exports.getChunckedInsertValues = exports.chunk = exports.buildCookieURL = void 0;
-var _sqlite = require("sqlite");
-var _sqlite2 = _interopRequireDefault(require("sqlite3"));
+exports.unixToLDAP = exports.loadCookiesFromFile = exports.ldapToUnix = exports.getUniqueCookies = exports.getDB = exports.getCookiesFilePath = exports.getChunckedInsertValues = exports.createDBFile = exports.chunk = exports.buildCookieURL = void 0;
 var _fs = require("fs");
 var _path = require("path");
+var _sqlite = require("sqlite");
+var _sqlite2 = _interopRequireDefault(require("sqlite3"));
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const {
   access
@@ -34,6 +34,30 @@ const getDB = (filePath, readOnly = true) => {
   return (0, _sqlite.open)(connectionOpts);
 };
 exports.getDB = getDB;
+const createDBFile = async ({
+  cookiesFilePath,
+  cookiesFileSecondPath,
+  createCookiesTableQuery
+}) => {
+  await _fs.promises.writeFile(cookiesFilePath, '', {
+    mode: 0o666
+  });
+  const connectionOpts = {
+    filename: cookiesFilePath,
+    driver: _sqlite2.default.Database
+  };
+  const db = await (0, _sqlite.open)(connectionOpts);
+  await db.run(createCookiesTableQuery);
+  await db.close();
+  cookiesFileSecondPath && (await _fs.promises.copyFile(cookiesFilePath, cookiesFileSecondPath).catch(console.log));
+};
+exports.createDBFile = createDBFile;
+const getUniqueCookies = async (cookiesArr, cookiesFilePath) => {
+  const cookiesInFile = await loadCookiesFromFile(cookiesFilePath);
+  const existingCookieNames = new Set(cookiesInFile.map(c => `${c.name}-${c.value.toString('base64')}`));
+  return cookiesArr.filter(cookie => !existingCookieNames.has(`${cookie.name}-${cookie.value.toString('base64')}`));
+};
+exports.getUniqueCookies = getUniqueCookies;
 const getChunckedInsertValues = cookiesArr => {
   const todayUnix = Math.floor(new Date().getTime() / 1000.0);
   const chunckedCookiesArr = chunk(cookiesArr, MAX_SQLITE_VARIABLES);

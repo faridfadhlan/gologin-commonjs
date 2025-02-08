@@ -72,37 +72,35 @@ export class BrowserChecker {
       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
     }
 
-    return;
+    const currentVersionReq = await this.getCurrentVersion();
+    const currentVersion = (currentVersionReq?.stdout || '').replace(/(\r\n|\n|\r)/gm, '');
 
-    // const currentVersionReq = await this.getCurrentVersion();
-    // const currentVersion = (currentVersionReq?.stdout || '').replace(/(\r\n|\n|\r)/gm, '');
+    if (browserLatestVersion === currentVersion || !checkBrowserUpdate) {
+      return;
+    }
 
-    // if (browserLatestVersion === currentVersion || !checkBrowserUpdate) {
-    //   return;
-    // }
+    if (autoUpdateBrowser) {
+      return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
+    }
 
-    // if (autoUpdateBrowser) {
-    //   return this.downloadBrowser(browserLatestVersion, browserDownloadUrl);
-    // }
+    return new Promise(resolve => {
+      const rl = createInterface(process.stdin, process.stdout);
+      const timeout = setTimeout(() => {
+        console.log(`\nContinue with current ${currentVersion} version.`);
+        resolve();
+      }, 10000);
 
-    // return new Promise(resolve => {
-    //   const rl = createInterface(process.stdin, process.stdout);
-    //   const timeout = setTimeout(() => {
-    //     console.log(`\nContinue with current ${currentVersion} version.`);
-    //     resolve();
-    //   }, 10000);
+      rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, (answer) => {
+        clearTimeout(timeout);
+        rl.close();
+        if (answer && answer[0].toString().toLowerCase() === 'y') {
+          return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
+        }
 
-    //   rl.question(`New Orbita ${browserLatestVersion} is available. Update? [y/n] `, (answer) => {
-    //     clearTimeout(timeout);
-    //     rl.close();
-    //     if (answer && answer[0].toString().toLowerCase() === 'y') {
-    //       return this.downloadBrowser(browserLatestVersion, browserDownloadUrl).then(() => resolve());
-    //     }
-
-    //     console.log(`Continue with current ${currentVersion} version.`);
-    //     resolve();
-    //   });
-    // });
+        console.log(`Continue with current ${currentVersion} version.`);
+        resolve();
+      });
+    });
   }
 
   async downloadBrowser(latestVersion, browserDownloadUrl) {
