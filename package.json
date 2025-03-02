@@ -1,8 +1,8 @@
 {
   "name": "gologin-commonjs",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "A Transpiled GoLogin API ESM to CommonJS",
-  "types": "./types/gologin.d.ts",
+  "types": "./types/src/gologin.d.ts",
   "main": "./dist/src/gologin.js",
   "repository": {
     "type": "git",
