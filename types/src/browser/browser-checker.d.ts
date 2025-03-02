@@ -1,5 +1,3 @@
-export const __esModule: boolean;
-export default BrowserChecker;
 export class BrowserChecker {
     constructor(skipOrbitaHashChecking: any);
     checkBrowser(autoUpdateBrowser?: boolean, checkBrowserUpdate?: boolean): Promise<any>;
@@ -19,3 +17,4 @@ export class BrowserChecker {
     deleteDir(path?: string): Promise<any>;
     #private;
 }
+export default BrowserChecker;

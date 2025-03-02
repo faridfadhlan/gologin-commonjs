@@ -9,6 +9,7 @@ import { dirname, join, resolve as _resolve, sep } from "path";
 import requests from "requestretry";
 import rimraf from "rimraf";
 import { SocksProxyAgent } from "socks-proxy-agent";
+import { fileURLToPath } from "url";
 
 import { fontsCollection } from "../fonts.js";
 import { getCurrentProfileBookmarks } from "./bookmarks/utils.js";
@@ -43,11 +44,13 @@ import { get, isPortReachable } from "./utils/utils.js";
 export { exitAll, GologinApi } from "./gologin-api.js";
 import { zeroProfileBookmarks } from "./utils/zero-profile-bookmarks.js";
 import { zeroProfilePreferences } from "./utils/zero-profile-preferences.js";
+import { tzlookup } from "./utils/timezone.js";
 const { access, unlink, writeFile, readFile, mkdir, copyFile } = _promises;
 
 const SEPARATOR = sep;
 const OS_PLATFORM = process.platform;
-const TIMEZONE_URL = "https://geo.myip.link";
+const TIMEZONE_URL = "https://geolocation-db.com/json/";
+// const TIMEZONE_URL = 'https://geo.myip.link';
 const PROXY_NONE = "none";
 
 const debug = debugDefault("gologin");
@@ -71,6 +74,7 @@ export class GoLogin {
     this.isEmptyFonts = false;
     this.isFirstSession = false;
     this.isCloudHeadless = options.isCloudHeadless ?? true;
+    this.storageGatewayUrl = `${STORAGE_GATEWAY_BASE_URL}/upload`;
 
     this.tmpdir = tmpdir();
     this.autoUpdateBrowser = !!options.autoUpdateBrowser;
@@ -251,12 +255,11 @@ export class GoLogin {
   async postFile(fileName, fileBuff) {
     debug("POSTING FILE", fileBuff.length);
     debug("Getting signed URL for S3");
-    const apiUrl = `${STORAGE_GATEWAY_BASE_URL}/upload`;
 
     const bodyBufferBiteLength = Buffer.byteLength(fileBuff);
     console.log("BUFFER SIZE", bodyBufferBiteLength);
 
-    await requests.put(apiUrl, {
+    await requests.put(this.storageGatewayUrl, {
       headers: {
         Authorization: `Bearer ${this.access_token}`,
         browserId: this.profile_id,
@@ -277,7 +280,7 @@ export class GoLogin {
 
   async emptyProfileFolder() {
     debug("get emptyProfileFolder");
-    const currentDir = dirname(new URL(import.meta.url).pathname);
+    const currentDir = dirname(fileURLToPath(import.meta.url));
     const zeroProfilePath = join(currentDir, "..", "zero_profile.zip");
     const profile = await readFile(_resolve(zeroProfilePath));
     debug("emptyProfileFolder LENGTH ::", profile.length);
@@ -863,27 +866,44 @@ export class GoLogin {
 
       const proxyUrl = `${proxy.mode}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
       debug(`getTimeZone start ${TIMEZONE_URL}`, proxyUrl);
-      data = await requests.get(TIMEZONE_URL, {
+      const response = await requests.get(TIMEZONE_URL, {
         proxy: proxyUrl,
         timeout: 20 * 1000,
-        maxAttempts: 3,
+        maxAttempts: 5,
       });
-    } else {
+      const result = JSON.parse(response.body);
       data = {
-        body: JSON.stringify({
-          country: "ID",
-          stateProv: "Jakarta",
-          city: "Jakarta",
-          timezone: "Asia/Jakarta",
-          ll: ["-6.21140", "106.84460"],
-          languages: "id",
+        body: {
+          country: result.country_code,
+          stateProv: result.city,
+          city: result.city,
+          timezone: tzlookup(result.latitude, result.longitude),
+          ll: [result.latitude, result.longitude],
+          languages: "en",
           accuracy: 100,
-        }),
+        },
+      };
+    } else {
+      const response = await requests.get(TIMEZONE_URL, {
+        timeout: 20 * 1000,
+        maxAttempts: 5,
+      });
+      const result = JSON.parse(response.body);
+      data = {
+        body: {
+          country: result.country_code,
+          stateProv: result.city,
+          city: result.city,
+          timezone: tzlookup(result.latitude, result.longitude),
+          ll: [result.latitude, result.longitude],
+          languages: "en",
+          accuracy: 100,
+        },
       };
     }
 
     debug("getTimeZone finish", data.body);
-    this._tz = JSON.parse(data.body);
+    this._tz = data.body;
 
     return this._tz.timezone;
   }
@@ -1135,14 +1155,14 @@ export class GoLogin {
       false;
 
     if (this.uploadCookiesToServer) {
-      await this.uploadProfileCookiesToServer();
+      const updateResult = await this.uploadProfileDataToServer();
+      this.storageGatewayUrl = updateResult.storageGateway.url;
     }
 
     this.is_stopping = true;
     await this.sanitizeProfile();
 
     if (is_posting) {
-      await this.saveBookmarksToDb();
       await this.commitProfile();
     }
 
@@ -1161,6 +1181,40 @@ export class GoLogin {
     debug(`PROFILE ${this.profile_id} STOPPED AND CLEAR`);
 
     return false;
+  }
+
+  async uploadProfileDataToServer() {
+    const cookies = await loadCookiesFromFile(this.cookiesFilePath);
+    const bookmarks = await getCurrentProfileBookmarks(this.bookmarksFilePath);
+
+    const body = {
+      cookies,
+      bookmarks,
+      isCookiesEncrypted: true,
+      isStorageGateway: true,
+    };
+
+    const updateResult = await requests
+      .post(
+        `${API_URL}/browser/features/profile/${this.profile_id}/update_after_close`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.access_token}`,
+            "User-Agent": "gologin-api",
+          },
+          json: body,
+          maxAttempts: 3,
+          retryDelay: 2000,
+          timeout: 20 * 1000,
+        }
+      )
+      .catch((e) => {
+        console.log(e);
+
+        return e;
+      });
+
+    return updateResult.body;
   }
 
   async stopBrowser() {

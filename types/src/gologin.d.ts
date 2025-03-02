@@ -1,8 +1,6 @@
-export = GoLogin;
-declare class GoLogin {
+export class GoLogin {
     constructor(options?: {});
     browserLang: string;
-    is_remote: any;
     access_token: any;
     profile_id: any;
     password: any;
@@ -15,12 +13,14 @@ declare class GoLogin {
     differentOs: boolean;
     profileOs: string;
     waitWebsocket: any;
+    isEmptyFonts: boolean;
+    isFirstSession: boolean;
     isCloudHeadless: any;
-    isNewCloudBrowser: any;
+    storageGatewayUrl: string;
     tmpdir: any;
     autoUpdateBrowser: boolean;
     checkBrowserUpdate: any;
-    browserChecker: any;
+    browserChecker: BrowserChecker;
     uploadCookiesToServer: any;
     writeCookiesFromServer: any;
     remote_debugging_port: any;
@@ -40,18 +40,17 @@ declare class GoLogin {
     profiles(): Promise<any>;
     getProfile(profile_id: any): Promise<any>;
     emptyProfile(): Promise<any>;
-    getProfileS3(s3path: any): Promise<any>;
+    getProfileS3(): Promise<any>;
     postFile(fileName: any, fileBuff: any): Promise<void>;
     emptyProfileFolder(): Promise<any>;
     convertPreferences(preferences: any): any;
     createBrowserExtension(): Promise<void>;
     extractProfile(path: any, zipfile: any): any;
+    downloadProfileAndExtract(profile: any, local: any): Promise<void>;
+    createZeroProfile(createCookiesTableQuery: any): Promise<void>;
     createStartup(local?: boolean): Promise<any>;
     language: any;
     resolution: {
-        width: number;
-        height: number;
-    } | {
         width: number;
         height: number;
     };
@@ -71,6 +70,7 @@ declare class GoLogin {
     createStartupAndSpawnBrowser(): Promise<any>;
     clearProfileFiles(): Promise<void>;
     stopAndCommit(options: any, local?: boolean): Promise<boolean>;
+    uploadProfileDataToServer(): Promise<any>;
     stopBrowser(): Promise<void>;
     killBrowser(): void;
     killAndCommit(options: any, local?: boolean): Promise<void>;
@@ -93,50 +93,33 @@ declare class GoLogin {
     getViewPort(): {
         width: number;
         height: number;
-    } | {
-        width: number;
-        height: number;
     };
     postCookies(profileId: any, cookies: any): Promise<any>;
     getCookies(profileId: any): Promise<any>;
-    writeCookiesToFile(): Promise<void>;
+    getCookiePath(defaultFilePath: any): {
+        primary: any;
+        secondary: any;
+    };
+    writeCookiesToFile(cookies: any): Promise<void>;
     uploadProfileCookiesToServer(): Promise<any>;
     saveBookmarksToDb(): Promise<void>;
     start(): Promise<{
         status: string;
         wsUrl: any;
-        message?: undefined;
-    } | {
-        status: string;
-        message: any;
-        wsUrl?: undefined;
     }>;
     startLocal(): Promise<{
         status: string;
         wsUrl: any;
     }>;
-    stop(): Promise<any>;
+    stop(): Promise<void>;
     stopLocal(options: any): Promise<void>;
     waitDebuggingUrl(delay_ms: any, try_count: number, remoteOrbitaUrl: any): any;
-    startRemote(delay_ms?: number): Promise<{
-        status: string;
-        wsUrl: any;
-        message?: undefined;
-    } | {
-        status: string;
-        message: any;
-        wsUrl?: undefined;
-    }>;
     stopRemote(): Promise<any>;
     getAvailableFonts(): string[];
     changeProfileResolution(resolution: any): Promise<any>;
     changeProfileUserAgent(userAgent: any): Promise<any>;
     changeProfileProxy(proxyData: any): Promise<any>;
 }
-declare namespace GoLogin {
-    export { __esModule, GologinApi, exitAll, GoLogin as default };
-}
-declare const __esModule: boolean;
-declare const GologinApi: typeof _gologinApi.GologinApi;
-declare const exitAll: typeof _gologinApi.exitAll;
-import _gologinApi = require("./gologin-api.js");
+export default GoLogin;
+import BrowserChecker from "./browser/browser-checker.js";
+export { exitAll, GologinApi } from "./gologin-api.js";

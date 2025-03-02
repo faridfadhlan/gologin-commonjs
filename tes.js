@@ -5,12 +5,13 @@ const { GoLogin } = require("./dist/src/gologin");
 
 const token =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NmQyNWY1YWIyYjc0NjE1ZDYwODQ5NmIiLCJ0eXBlIjoiZGV2Iiwiand0aWQiOiI2NmQ1MGI2MjI3Y2JiYzZlM2NkNjE3MmIifQ.q07McCw7YA7K2EDavmr6jM5l_deKzWtVeDhMeuEMmkU";
-const profile_id = "66fe50293b03e1e5216d3977";
+const profile_id = "67b960fce0fa428c4a0221f4";
 
 (async () => {
   const GL = new GoLogin({
     token,
     profile_id,
+    uploadCookiesToServer: true,
   });
 
   try {

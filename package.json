@@ -1,6 +1,6 @@
 {
   "name": "gologin-commonjs",
-  "version": "2.1.14",
+  "version": "3.0.0",
   "description": "A Transpiled GoLogin API ESM to CommonJS",
   "types": "./types/gologin.d.ts",
   "main": "./dist/src/gologin.js",
@@ -40,6 +40,8 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
+    "tsc": "tsc",
+    "build": "npx tsc && babel gologin --out-dir dist",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "npx prettier --single-quote src/* --write",
     "iphey": "GOLOGIN_PROFILE_ID= GOLOGIN_API_TOKEN= node examples/example-iphey "

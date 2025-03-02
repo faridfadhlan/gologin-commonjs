@@ -1,16 +1,11 @@
-export const __esModule: boolean;
-export default ExtensionsManager;
-declare const ExtensionsManager_base: any;
-export class ExtensionsManager extends ExtensionsManager_base {
-    [x: string]: any;
+export class ExtensionsManager extends UserExtensionsManager {
     init(): Promise<any>;
-    existedUserExtensions: any;
     get isInited(): boolean;
     get useLocalExtStorage(): boolean;
     get deleteProfileExtFolders(): boolean;
     get useCookiesExt(): boolean;
     get existedChromeExtensionsList(): any[];
-    checkChromeExtensions(profileExtensions?: any[]): Promise<any>;
+    checkChromeExtensions(profileExtensions?: any[]): Promise<any[]>;
     downloadChromeExtensions(idsToDownload?: any[]): Promise<any>;
     getExtensionsPolicies(): Promise<void>;
     updateExtensions(): Promise<void>;
@@ -19,3 +14,5 @@ export class ExtensionsManager extends ExtensionsManager_base {
     getExtensionsToInstall(extensionsFromPref: any, extensionsFromDB: any): any;
     #private;
 }
+export default ExtensionsManager;
+import UserExtensionsManager from './user-extensions-manager.js';

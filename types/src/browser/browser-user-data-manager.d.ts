@@ -1,4 +1,3 @@
-export const __esModule: boolean;
 export function downloadCookies({ profileId, ACCESS_TOKEN, API_BASE_URL }: {
     profileId: any;
     ACCESS_TOKEN: any;

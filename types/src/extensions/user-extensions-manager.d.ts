@@ -1,5 +1,3 @@
-export const __esModule: boolean;
-export default UserExtensionsManager;
 export class UserExtensionsManager {
     set userAgent(userAgent: string);
     get userAgent(): string;
@@ -17,3 +15,4 @@ export class UserExtensionsManager {
     generateExtensionId(): string;
     #private;
 }
+export default UserExtensionsManager;
