@@ -1,6 +1,6 @@
 {
   "name": "gologin-commonjs",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "A Transpiled GoLogin API ESM to CommonJS",
   "types": "./types/src/gologin.d.ts",
   "main": "./dist/src/gologin.js",
@@ -21,6 +21,7 @@
     "decompress-unzip": "^4.0.1",
     "form-data": "^3.0.0",
     "gologin": "^2.1.1",
+    "ncp": "^2.0.0",
     "progress": "^2.0.3",
     "puppeteer-core": "^2.1.1",
     "request": "^2.88.2",
@@ -40,10 +41,9 @@
     "typescript": "^5.5.4"
   },
   "scripts": {
-    "tsc": "tsc",
-    "build": "npm run build:tsc && npm run build:common",
-    "build:tsc": "npx tsc",
-    "build:common": "abel gologin --out-dir dist",
+    "build": "tsc && npm run build:common",
+    "build:common": "babel gologin --out-dir dist && npm run copy",
+    "copy": "ncp gologin/fonts_config dist/fonts_config && ncp gologin/gologin_zeroprofile.b64 dist/gologin_zeroprofile.b64 && ncp gologin/gologin-browser-ext.zip dist/gologin-browser-ext.zip && ncp gologin/zero_profile.zip dist/zero_profile.zip",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "npx prettier --single-quote src/* --write",
     "iphey": "GOLOGIN_PROFILE_ID= GOLOGIN_API_TOKEN= node examples/example-iphey "

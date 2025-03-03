@@ -1,11 +1,11 @@
-import { type Browser } from 'puppeteer-core/lib/Browser';
+import { type Browser } from "puppeteer-core/lib/Browser";
 
-export const OPERATING_SYSTEMS = {
-  win: 'win',
-  lin: 'lin',
-  mac: 'mac',
-  android: 'android',
-} as const;
+declare const OPERATING_SYSTEMS: {
+  win: "win";
+  lin: "lin";
+  mac: "mac";
+  android: "android";
+};
 export type OsType = (typeof OPERATING_SYSTEMS)[keyof typeof OPERATING_SYSTEMS];
 
 type CloudLaunchParams = {
@@ -34,16 +34,16 @@ type LaunchParams =
   | ExistingProfileLaunchParams
   | NewProfileLaunchParams
   | {
-    /**
-     * default delay, 250
-     */
-    defaultDelay: number;
+      /**
+       * default delay, 250
+       */
+      defaultDelay: number;
 
-    /**
-     * Operating system
-     */
-    os: OsType;
-  };
+      /**
+       * Operating system
+       */
+      os: OsType;
+    };
 
 type LaunchFn = (params?: LaunchParams) => Promise<{ browser: Browser }>;
 
