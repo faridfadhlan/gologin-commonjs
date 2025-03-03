@@ -12,6 +12,7 @@ const profile_id = "67b960fce0fa428c4a0221f4";
     token,
     profile_id,
     uploadCookiesToServer: true,
+    restoreLastSession: false,
   });
 
   try {

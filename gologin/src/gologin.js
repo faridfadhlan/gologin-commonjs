@@ -86,7 +86,7 @@ export class GoLogin {
     this.timezone = options.timezone;
     this.extensionPathsToInstall = [];
     this.customArgs = options.args || [];
-    this.restoreLastSession = options.restoreLastSession || true;
+    this.restoreLastSession = options.restoreLastSession ?? true;
     this.processSpawned = null;
     this.processKillTimeout = 1 * 1000;
 
