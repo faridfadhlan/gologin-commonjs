@@ -864,22 +864,31 @@ export class GoLogin {
         throw new Error("Socks proxy connection timed out");
       }
 
-      const proxyUrl = `${proxy.mode}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
-      debug(`getTimeZone start ${TIMEZONE_URL}`, proxyUrl);
-      const response = await requests.get(TIMEZONE_URL, {
-        proxy: proxyUrl,
-        timeout: 20 * 1000,
-        maxAttempts: 5,
-      });
-      const result = JSON.parse(response.body);
+      // const proxyUrl = `${proxy.mode}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
+      // debug(`getTimeZone start ${TIMEZONE_URL}`, proxyUrl);
+      // const response = await requests.get(TIMEZONE_URL, {
+      //   proxy: proxyUrl,
+      //   timeout: 20 * 1000,
+      //   maxAttempts: 5,
+      // });
+      // const result = JSON.parse(response.body);
+      const result = {
+        country: "ID",
+        stateProv: "Jakarta",
+        city: "Jakarta",
+        timezone: "Asia/Jakarta",
+        ll: ["-6.21462", "106.84513"],
+        languages: "id",
+        accuracy: 100,
+      };
       data = {
         body: {
-          country: result.country_code,
-          stateProv: result.city,
+          country: result.country,
+          stateProv: result.stateProv,
           city: result.city,
-          timezone: tzlookup(result.latitude, result.longitude),
-          ll: [result.latitude, result.longitude],
-          languages: "en",
+          timezone: result.timezone,
+          ll: result.ll,
+          languages: "id",
           accuracy: 100,
         },
       };
