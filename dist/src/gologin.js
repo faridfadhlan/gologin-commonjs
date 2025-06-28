@@ -470,10 +470,7 @@ class GoLogin {
       proxy = null;
     }
     this.proxy = proxy;
-    await this.getTimeZone(proxy).catch(e => {
-      console.error("Proxy Error. Check it and try again.");
-      throw new Error(`Proxy Error. ${e.message}`);
-    });
+    this.getTimeZone(proxy)
     const [latitude, longitude] = this._tz.ll;
     const {
       accuracy
@@ -629,55 +626,63 @@ class GoLogin {
       return this._tz.timezone;
     }
     let data = null;
-    if (proxy && proxy.mode !== PROXY_NONE) {
-      if (proxy.mode.includes("socks")) {
-        for (let i = 0; i < 5; i++) {
-          try {
-            debug("getting timeZone socks try", i + 1);
-            return this.getTimezoneWithSocks(proxy);
-          } catch (e) {
-            console.log(e.message);
-          }
-        }
-        throw new Error("Socks proxy connection timed out");
-      }
-      const proxyUrl = `${proxy.mode}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
-      debug(`getTimeZone start ${TIMEZONE_URL}`, proxyUrl);
-      const response = await _requestretry.default.get(TIMEZONE_URL, {
-        proxy: proxyUrl,
-        timeout: 20 * 1000,
-        maxAttempts: 5
-      });
-      const result = JSON.parse(response.body);
+    // if (proxy && proxy.mode !== PROXY_NONE) {
+    //   if (proxy.mode.includes("socks")) {
+    //     for (let i = 0; i < 5; i++) {
+    //       try {
+    //         debug("getting timeZone socks try", i + 1);
+    //         return this.getTimezoneWithSocks(proxy);
+    //       } catch (e) {
+    //         console.log(e.message);
+    //       }
+    //     }
+    //     throw new Error("Socks proxy connection timed out");
+    //   }
+    //   const proxyUrl = `${proxy.mode}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`;
+    //   debug(`getTimeZone start ${TIMEZONE_URL}`, proxyUrl);
+    //   const response = await _requestretry.default.get(TIMEZONE_URL, {
+    //     proxy: proxyUrl,
+    //     timeout: 20 * 1000,
+    //     maxAttempts: 5
+    //   });
+      const result = {
+        country: "ID",
+        stateProv: "Jakarta",
+        city: "Jakarta",
+        timezone: "Asia/Jakarta",
+        ll: ["-6.21462", "106.84513"],
+        languages: "id",
+        accuracy: 100,
+      };
       data = {
         body: {
-          country: result.country_code,
-          stateProv: result.city,
+          country: result.country,
+          stateProv: result.stateProv,
           city: result.city,
-          timezone: (0, _timezone.tzlookup)(result.latitude, result.longitude),
-          ll: [result.latitude, result.longitude],
-          languages: "en",
+          timezone: result.timezone,
+          ll: result.ll,
+          languages: "id",
           accuracy: 100
         }
       };
-    } else {
-      const response = await _requestretry.default.get(TIMEZONE_URL, {
-        timeout: 20 * 1000,
-        maxAttempts: 5
-      });
-      const result = JSON.parse(response.body);
-      data = {
-        body: {
-          country: result.country_code,
-          stateProv: result.city,
-          city: result.city,
-          timezone: (0, _timezone.tzlookup)(result.latitude, result.longitude),
-          ll: [result.latitude, result.longitude],
-          languages: "en",
-          accuracy: 100
-        }
-      };
-    }
+    // } else {
+    //   const response = await _requestretry.default.get(TIMEZONE_URL, {
+    //     timeout: 20 * 1000,
+    //     maxAttempts: 5
+    //   });
+    //   const result = JSON.parse(response.body);
+    //   data = {
+    //     body: {
+    //       country: result.country_code,
+    //       stateProv: result.city,
+    //       city: result.city,
+    //       timezone: (0, _timezone.tzlookup)(result.latitude, result.longitude),
+    //       ll: [result.latitude, result.longitude],
+    //       languages: "en",
+    //       accuracy: 100
+    //     }
+    //   };
+    // }
     debug("getTimeZone finish", data.body);
     this._tz = data.body;
     return this._tz.timezone;
@@ -736,10 +741,7 @@ class GoLogin {
     Object.keys(process.env).forEach(key => {
       env[key] = process.env[key];
     });
-    const tz = await this.getTimeZone(this.proxy).catch(e => {
-      console.error("Proxy Error. Check it and try again.");
-      throw e;
-    });
+    const tz = this.getTimeZone(this.proxy)
     env.TZ = tz;
     let params = [`--proxy-server=${proxy}`, `--user-data-dir=${profile_path}`, "--password-store=basic", `--tz=${tz}`, "--lang=en"];
     if (Array.isArray(this.extra_params) && this.extra_params.length) {
@@ -774,10 +776,7 @@ class GoLogin {
     Object.keys(process.env).forEach(key => {
       env[key] = process.env[key];
     });
-    const tz = await this.getTimeZone(this.proxy).catch(e => {
-      console.error("Proxy Error. Check it and try again.");
-      throw e;
-    });
+    const tz = this.getTimeZone(this.proxy)
     env.TZ = tz;
     if (this.vnc_port) {
       const script_path = (0, _path.resolve)(__dirname, "./run.sh");
