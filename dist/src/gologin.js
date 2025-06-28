@@ -618,7 +618,7 @@ class GoLogin {
     }
     return port;
   }
-  async getTimeZone(proxy) {
+  getTimeZone(proxy) {
     debug("getting timeZone proxy=", proxy);
     if (this.timezone) {
       debug("getTimeZone from options", this.timezone);
