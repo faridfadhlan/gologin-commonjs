@@ -811,9 +811,9 @@ class GoLogin {
         params.push(arg);
       }
       if (proxy) {
-        const hr_rules = `"MAP * 0.0.0.0 , EXCLUDE ${proxy_host}"`;
-        params.push(`--proxy-server=${proxy}`);
-        params.push(`--host-resolver-rules=${hr_rules}`);
+        // const hr_rules = `"MAP * 0.0.0.0 , EXCLUDE ${proxy_host}"`;
+        // params.push(`--proxy-server=${proxy}`);
+        // params.push(`--host-resolver-rules=${hr_rules}`);
       }
       if (Array.isArray(this.extra_params) && this.extra_params.length) {
         params = params.concat(this.extra_params);
