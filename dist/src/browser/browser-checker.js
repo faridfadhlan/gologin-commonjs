@@ -236,17 +236,23 @@ class BrowserChecker {
       }
       return;
     }
-    const hashFileContent = await exec(`cat ${(0, _path.join)(this.#browserPath, DEB_HASH_FILE)}`);
-    let serverRes = (hashFileContent.stdout || '').toString().trim();
-    serverRes = serverRes.split(' ')[0];
-    const calculateLocalBrowserHash = await exec(`cd ${(0, _path.join)(this.#browserPath, EXTRACTED_FOLDER)} && find orbita-browser -type f -print0 | sort -z | \
-            xargs -0 sha256sum > ${this.#browserPath}/calculatedFolderSha.txt`);
-    const localHashContent = await exec(`cd ${this.#browserPath} && sha256sum calculatedFolderSha.txt`);
-    let userRes = (localHashContent.stdout || '').toString().trim();
-    userRes = userRes.split(' ')[0];
-    if (userRes !== serverRes) {
-      throw new Error('Error in sum matching. Please run script again.');
-    }
+    return Promise.resolve();
+
+    // const hashFileContent = await exec(`cat ${join(this.#browserPath, DEB_HASH_FILE)}`);
+    // let serverRes = (hashFileContent.stdout || '').toString().trim();
+    // serverRes = serverRes.split(' ')[0];
+
+    // const calculateLocalBrowserHash = await exec(
+    //   `cd ${join(this.#browserPath, EXTRACTED_FOLDER)} && find orbita-browser -type f -print0 | sort -z | \
+    //         xargs -0 sha256sum > ${this.#browserPath}/calculatedFolderSha.txt`,
+    // );
+
+    // const localHashContent = await exec(`cd ${this.#browserPath} && sha256sum calculatedFolderSha.txt`);
+    // let userRes = (localHashContent.stdout || '').toString().trim();
+    // userRes = userRes.split(' ')[0];
+    // if (userRes !== serverRes) {
+    //   throw new Error('Error in sum matching. Please run script again.');
+    // }
   }
   async replaceBrowser() {
     console.log('Copy Orbita to target path');

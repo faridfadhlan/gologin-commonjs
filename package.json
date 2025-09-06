@@ -1,6 +1,6 @@
 {
   "name": "gologin-commonjs",
-  "version": "1.2.6",
+  "version": "1.2.8",
   "description": "A Transpiled GoLogin API ESM to CommonJS",
   "types": "./types/src/gologin.d.ts",
   "main": "./dist/src/gologin.js",
