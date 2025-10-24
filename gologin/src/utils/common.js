@@ -1,11 +1,13 @@
 import { exec } from 'child_process';
+import { promises as fsPromises } from 'fs';
 import { homedir } from 'os';
-import { join, sep } from 'path';
+import { dirname, join, sep } from 'path';
 import { promisify } from 'util';
 
 import { deleteExtensionArchive, extractExtension } from '../extensions/extensions-extractor.js';
 
 export const API_URL = 'https://api.gologin.com';
+export const FALLBACK_API_URL = 'https://api.gologin.co';
 
 const HOMEDIR = homedir();
 const CHROME_EXT_DIR_NAME = 'chrome-extensions';
@@ -32,6 +34,19 @@ const getMacArmSpec = async () => {
   const [_, armVersion] = match.split(' ');
 
   return armVersion;
+};
+
+export const ensureDirectoryExists = async (filePath) => {
+  try {
+    const directory = dirname(filePath);
+    if (directory && directory !== '.') {
+      await fsPromises.mkdir(directory, { recursive: true, force: true });
+    }
+  } catch (error) {
+    if (error.code !== 'EEXIST') {
+      console.error('Error creating directory:', error.message);
+    }
+  }
 };
 
 const getOsAdvanced = async () => {

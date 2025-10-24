@@ -8,10 +8,10 @@ var _crypto = require("crypto");
 var _fs = require("fs");
 var _os = require("os");
 var _path = require("path");
-var _requestretry = _interopRequireDefault(require("requestretry"));
 var _url = require("url");
 var _fonts = require("../../fonts.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+var _common = require("../utils/common.js");
+var _http = require("../utils/http.js");
 const {
   access,
   readFile,
@@ -36,15 +36,15 @@ const downloadCookies = ({
   profileId,
   ACCESS_TOKEN,
   API_BASE_URL
-}) => _requestretry.default.get(`${API_BASE_URL}/browser/${profileId}/cookies`, {
-  headers: {
-    Authorization: `Bearer ${ACCESS_TOKEN}`,
-    'user-agent': 'gologin-api'
-  },
+}) => (0, _http.makeRequest)(`${API_BASE_URL}/browser/${profileId}/cookies`, {
   json: true,
   maxAttempts: 3,
   retryDelay: 2000,
-  timeout: 10 * 1000
+  timeout: 10 * 1000,
+  method: 'GET'
+}, {
+  token: ACCESS_TOKEN,
+  fallbackUrl: `${_common.FALLBACK_API_URL}/browser/${profileId}/cookies`
 }).catch(e => {
   console.log(e);
   return {
@@ -57,15 +57,15 @@ const uploadCookies = ({
   profileId,
   ACCESS_TOKEN,
   API_BASE_URL
-}) => _requestretry.default.post(`${API_BASE_URL}/browser/${profileId}/cookies?encrypted=true`, {
-  headers: {
-    Authorization: `Bearer ${ACCESS_TOKEN}`,
-    'User-Agent': 'gologin-api'
-  },
+}) => (0, _http.makeRequest)(`${API_BASE_URL}/browser/${profileId}/cookies?encrypted=true`, {
   json: cookies,
   maxAttempts: 3,
   retryDelay: 2000,
-  timeout: 20 * 1000
+  timeout: 20 * 1000,
+  method: 'POST'
+}, {
+  token: ACCESS_TOKEN,
+  fallbackUrl: `${_common.FALLBACK_API_URL}/browser/${profileId}/cookies?encrypted=true`
 }).catch(e => {
   console.log(e);
   return e;
@@ -81,11 +81,14 @@ const downloadFonts = async (fontsList = [], profilePath) => {
   });
   const files = await readdir(browserFontsPath);
   const fontsToDownload = fontsList.filter(font => !files.includes(font));
-  let promises = fontsToDownload.map(font => _requestretry.default.get(FONTS_URL + font, {
-    maxAttempts: 5,
-    retryDelay: 2000,
-    timeout: 30 * 1000
-  }).pipe((0, _fs.createWriteStream)((0, _path.join)(browserFontsPath, font))));
+  let promises = fontsToDownload.map(async font => {
+    const body = await (0, _http.makeRequest)(FONTS_URL + font, {
+      maxAttempts: 5,
+      retryDelay: 2000,
+      timeout: 30 * 1000
+    });
+    await writeFile((0, _path.join)(browserFontsPath, font), body);
+  });
   if (promises.length) {
     await Promise.all(promises);
   }

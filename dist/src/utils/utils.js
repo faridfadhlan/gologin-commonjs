@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.isPortReachable = exports.get = exports.findLatestBrowserVersionDirectory = void 0;
+exports.isPortReachable = exports.get = exports.findLatestBrowserVersionDirectory = exports.delay = void 0;
 var _nodeFs = require("node:fs");
 var _nodeNet = _interopRequireDefault(require("node:net"));
 var _nodePath = require("node:path");
@@ -51,3 +51,5 @@ const findLatestBrowserVersionDirectory = browserPath => {
   return folderName;
 };
 exports.findLatestBrowserVersionDirectory = findLatestBrowserVersionDirectory;
+const delay = (ms = 250) => new Promise(res => setTimeout(res, ms));
+exports.delay = delay;

@@ -9,6 +9,7 @@ var _path = require("path");
 var _requestretry = _interopRequireDefault(require("requestretry"));
 var _common = require("../utils/common.js");
 var _userExtensionsManager = _interopRequireDefault(require("./user-extensions-manager.js"));
+var _http = require("../utils/http.js");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const {
   mkdir,
@@ -16,7 +17,7 @@ const {
   rmdir,
   unlink
 } = _fs.promises;
-const EXTENSION_URL = 'https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&x=id%3D{ext_id}%26uc&prodversion=97.0.4692.71';
+const EXTENSION_URL = 'https://clients2.google.com/service/update2/crx?response=redirect&acceptformat=crx2,crx3&x=id%3D{ext_id}%26uc&prodversion=135.0.7049.41';
 class ExtensionsManager extends _userExtensionsManager.default {
   #existedChromeExtensions = [];
   #inited = false;
@@ -105,6 +106,7 @@ class ExtensionsManager extends _userExtensionsManager.default {
       const extVer = getExtVersion(reqPath);
       const buffer = await new Promise(res => {
         const chunks = [];
+        console.log('extUrl', extUrl);
         _requestretry.default.get(extUrl, {
           maxAttempts: 3,
           retryDelay: 1000,
@@ -112,6 +114,7 @@ class ExtensionsManager extends _userExtensionsManager.default {
           fullResponse: false
         }).on('data', data => chunks.push(data)).on('end', () => res(Buffer.concat(chunks)));
       });
+      console.log('buffer', buffer);
       let zipExt;
       try {
         zipExt = crxToZip(buffer);
@@ -128,17 +131,15 @@ class ExtensionsManager extends _userExtensionsManager.default {
     return Promise.all(promises);
   }
   async getExtensionsPolicies() {
-    const globalExtConfig = await _requestretry.default.get(`${this.apiBaseUrl}/gologin-settings/chrome_ext_policies`, {
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        'user-agent': this.userAgent,
-        'x-two-factor-token': this.twoFaKey || ''
-      },
+    const globalExtConfig = await (0, _http.makeRequest)(`${this.apiBaseUrl}/gologin-settings/chrome_ext_policies`, {
       json: true,
       maxAttempts: 2,
       retryDelay: 1000,
       timeout: 10 * 1000,
-      fullResponse: false
+      method: 'GET'
+    }, {
+      token: this.accessToken,
+      fallbackUrl: `${_common.FALLBACK_API_URL}/gologin-settings/chrome_ext_policies`
     });
     const chromeExtPolicies = globalExtConfig?.chromeExtPolicies || {};
     const {
@@ -202,36 +203,30 @@ class ExtensionsManager extends _userExtensionsManager.default {
     if (!extensionsIds?.length) {
       return;
     }
-    const checkResponse = await (0, _requestretry.default)(`${this.apiBaseUrl}/extensions/check`, {
+    const checkResponse = await (0, _http.makeRequest)(`${this.apiBaseUrl}/extensions/check`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        'user-agent': this.userAgent,
-        'x-two-factor-token': this.twoFaKey || ''
-      },
-      body: {
+      json: {
         extensionsIds
-      },
-      json: true
+      }
+    }, {
+      token: this.accessToken,
+      fallbackUrl: `${_common.FALLBACK_API_URL}/extensions/check`
     });
     const {
       extensionsToAdd = []
-    } = checkResponse.body;
+    } = checkResponse;
     if (!extensionsToAdd.length) {
       return;
     }
     const extensionsToUpdate = await this.getExtensionsNameAndImage(extensionsToAdd, pathToExtensions);
-    (0, _requestretry.default)(`${this.apiBaseUrl}/extensions/create`, {
+    (0, _http.makeRequest)(`${this.apiBaseUrl}/extensions/create`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        'user-agent': this.userAgent,
-        'x-two-factor-token': this.twoFaKey || ''
-      },
-      body: {
+      json: {
         extensionsInfo: extensionsToUpdate
-      },
-      json: true
+      }
+    }, {
+      token: this.accessToken,
+      fallbackUrl: `${_common.FALLBACK_API_URL}/extensions/create`
     });
   }
   getExtensionsToInstall(extensionsFromPref, extensionsFromDB) {

@@ -1,8 +1,8 @@
+export function exitAll(): void;
 export function getDefaultParams(): {
-    token: any;
-    profile_id: any;
-    executablePath: any;
-    autoUpdateBrowser: boolean;
+    token: string;
+    profile_id: string;
+    executablePath: string;
 };
 export function GologinApi({ token }: {
     token: any;
@@ -10,8 +10,14 @@ export function GologinApi({ token }: {
     launch(params?: {}): Promise<{
         browser: any;
     }>;
-    exit(status?: number): Promise<void>;
-    delay: (ms?: number) => any;
+    createProfileWithCustomParams(options: any): Promise<any>;
+    refreshProfilesFingerprint(profileIds: any): Promise<any>;
+    createProfileRandomFingerprint(name?: string): Promise<any>;
+    updateUserAgentToLatestBrowser(profileIds: any, workspaceId?: string): Promise<any>;
+    changeProfileProxy(profileId: any, proxyData: any): Promise<any>;
+    getAvailableType(availableTrafficData: any): "none" | "mobile" | "resident" | "dataCenter";
+    addGologinProxyToProfile(profileId: any, countryCode: any, proxyType?: string): Promise<any>;
+    addCookiesToProfile(profileId: any, cookies: any): Promise<any>;
+    deleteProfile(profileId: any): Promise<any>;
+    exit(): Promise<void>;
 };
-export function exitAll(): void;
-export function delay(ms?: number): any;

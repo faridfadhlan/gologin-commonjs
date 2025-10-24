@@ -8,6 +8,7 @@ var _fs = require("fs");
 var _path = require("path");
 var _sqlite = require("sqlite");
 var _sqlite2 = _interopRequireDefault(require("sqlite3"));
+var _common = require("../utils/common.js");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const {
   access
@@ -49,13 +50,17 @@ const createDBFile = async ({
   const db = await (0, _sqlite.open)(connectionOpts);
   await db.run(createCookiesTableQuery);
   await db.close();
-  cookiesFileSecondPath && (await _fs.promises.copyFile(cookiesFilePath, cookiesFileSecondPath).catch(console.log));
+  await (0, _common.ensureDirectoryExists)(cookiesFilePath);
+  await (0, _common.ensureDirectoryExists)(cookiesFileSecondPath);
+  cookiesFileSecondPath && (await _fs.promises.copyFile(cookiesFilePath, cookiesFileSecondPath).catch(error => {
+    console.error('error in copyFile createDBFile', error.message);
+  }));
 };
 exports.createDBFile = createDBFile;
 const getUniqueCookies = async (cookiesArr, cookiesFilePath) => {
   const cookiesInFile = await loadCookiesFromFile(cookiesFilePath);
-  const existingCookieNames = new Set(cookiesInFile.map(c => `${c.name}-${c.value.toString('base64')}`));
-  return cookiesArr.filter(cookie => !existingCookieNames.has(`${cookie.name}-${cookie.value.toString('base64')}`));
+  const existingCookieNames = new Set(cookiesInFile.map(c => `${c.name}-${c.domain}-${c.path}`));
+  return cookiesArr.filter(cookie => !existingCookieNames.has(`${cookie.name}-${cookie.domain}-${cookie.path}`));
 };
 exports.getUniqueCookies = getUniqueCookies;
 const getChunckedInsertValues = cookiesArr => {
@@ -97,9 +102,18 @@ const getChunckedInsertValues = cookiesArr => {
   });
 };
 exports.getChunckedInsertValues = getChunckedInsertValues;
-const loadCookiesFromFile = async filePath => {
+const loadCookiesFromFile = async (filePath, isSecondTry = false, profileId, tmpdir) => {
   let db;
   const cookies = [];
+  let secondCookiesFilePath;
+  try {
+    const isNetworkFolder = filePath.includes('Network');
+    secondCookiesFilePath = isNetworkFolder ? (0, _path.join)(tmpdir, `gologin_profile_${profileId}`, 'Default', 'Cookies') : (0, _path.join)(tmpdir, `gologin_profile_${profileId}`, 'Default', 'Network', 'Cookies');
+  } catch (error) {
+    console.log(error);
+    console.log('error in loadCookiesFromFile', error.message);
+  }
+  console.log(1);
   try {
     db = await getDB(filePath);
     const cookiesRows = await db.all('select * from cookies');
@@ -132,9 +146,15 @@ const loadCookiesFromFile = async filePath => {
       });
     }
   } catch (error) {
-    console.log(error);
+    console.log('error in loadCookiesFromFile', error.message);
+    if (!isSecondTry) {
+      return await loadCookiesFromFile(secondCookiesFilePath, true, profileId, tmpdir);
+    }
   } finally {
     db && (await db.close());
+  }
+  if (!cookies.length && !isSecondTry) {
+    return loadCookiesFromFile(secondCookiesFilePath, true, profileId, tmpdir);
   }
   return cookies;
 };

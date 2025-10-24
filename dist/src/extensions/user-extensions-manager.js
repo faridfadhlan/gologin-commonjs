@@ -8,6 +8,7 @@ var _fs = require("fs");
 var _path = require("path");
 var _requestretry = _interopRequireDefault(require("requestretry"));
 var _common = require("../utils/common.js");
+var _http = require("../utils/http.js");
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const {
   readdir,
@@ -71,19 +72,17 @@ class UserExtensionsManager {
     if (!userChromeExtensions.length) {
       return;
     }
-    const extensionsToDownloadPaths = (await _requestretry.default.post(`${this.#API_BASE_URL}/extensions/user_chrome_extensions_paths`, {
-      json: true,
-      fullResponse: false,
-      headers: {
-        Authorization: `Bearer ${this.#ACCESS_TOKEN}`,
-        'user-agent': this.#USER_AGENT,
-        'x-two-factor-token': this.#TWO_FA_KEY || ''
-      },
-      body: {
+    const extensionsToDownloadPaths = (await (0, _http.makeRequest)(`${this.#API_BASE_URL}/extensions/user_chrome_extensions_paths`, {
+      fullResponse: true,
+      json: {
         existedUserChromeExtensions: this.#existedUserExtensions,
         profileId,
         userChromeExtensions
-      }
+      },
+      method: 'POST'
+    }, {
+      token: this.#ACCESS_TOKEN,
+      fallbackUrl: `${_common.FALLBACK_API_URL}/extensions/user_chrome_extensions_paths`
     })) || [];
     const extensionsToDownloadPathsFiltered = extensionsToDownloadPaths.filter(extPath => userChromeExtensions.some(extId => extPath.includes(extId)));
     if (!extensionsToDownloadPathsFiltered.length) {

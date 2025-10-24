@@ -9,9 +9,9 @@ export class UserExtensionsManager {
     get apiBaseUrl(): string;
     set existedUserExtensions(fileList: any[]);
     get existedUserExtensions(): any[];
-    checkLocalUserChromeExtensions: (userChromeExtensions: any, profileId: any) => Promise<any[]>;
-    getExtensionsStrToIncludeAsOrbitaParam(profileExtensions?: any[], folderPath?: any): Promise<any[]>;
-    getExtensionsNameAndImage(extensionsIds: any, pathToExtensions: any): Promise<any>;
+    checkLocalUserChromeExtensions: (userChromeExtensions: any, profileId: any) => Promise<string[]>;
+    getExtensionsStrToIncludeAsOrbitaParam(profileExtensions?: any[], folderPath?: string): Promise<string[]>;
+    getExtensionsNameAndImage(extensionsIds: any, pathToExtensions: any): Promise<any[]>;
     generateExtensionId(): string;
     #private;
 }

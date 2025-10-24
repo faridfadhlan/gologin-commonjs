@@ -1,20 +1,28 @@
 export class BrowserChecker {
-    constructor(skipOrbitaHashChecking: any);
-    checkBrowser(autoUpdateBrowser?: boolean, checkBrowserUpdate?: boolean): Promise<any>;
-    downloadBrowser(latestVersion: any, browserDownloadUrl: any): Promise<void>;
-    addLatestVersion(latestVersion: any): any;
-    downloadBrowserArchive(link: any, pathStr: any): any;
+    homedir: string;
+    browserPath: string;
+    executableFilePath: any;
+    skipOrbitaHashChecking: boolean;
+    downloadManager: any;
+    checkBrowser({ autoUpdateBrowser, majorVersion }: {
+        autoUpdateBrowser: any;
+        majorVersion: any;
+    }): Promise<string>;
+    downloadBrowser(majorVersion: any): Promise<void>;
+    getBrowserExecutablePath(majorVersion: any): string;
+    getBrowserDownloadUrl(majorVersion: any): string;
+    addLatestVersion(latestVersion: any): Promise<void>;
+    downloadBrowserArchive(link: any, pathStr: any): Promise<any>;
     checkBrowserArchive(pathStr: any): Promise<void>;
     extractBrowser(): Promise<any>;
-    downloadHashFile(latestVersion: any): Promise<any>;
-    checkBrowserSum(latestVersion: any): Promise<any>;
-    replaceBrowser(): Promise<any>;
-    deleteOldArchives(deleteCurrentBrowser?: boolean): Promise<any>;
+    downloadHashFile(latestVersion: any): Promise<void>;
+    checkBrowserSum(latestVersion: any): Promise<void>;
+    replaceBrowser(majorVersion: any): Promise<void>;
+    deleteOldArchives(): Promise<void | any[]>;
     copyDir(src: any, dest: any): Promise<void>;
-    getCurrentVersion(): any;
-    getLatestBrowserVersion(): any;
+    getCurrentVersion(majorVersion: any): Promise<string>;
+    getLatestBrowserVersion(): Promise<any>;
     get getOrbitaPath(): any;
-    deleteDir(path?: string): Promise<any>;
-    #private;
+    deleteDir(path?: string): Promise<void>;
 }
 export default BrowserChecker;

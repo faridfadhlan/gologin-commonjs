@@ -3,6 +3,8 @@ import { join } from 'path';
 import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 
+import { ensureDirectoryExists } from '../utils/common.js';
+
 const { access } = fsPromises;
 const { Database, OPEN_READONLY } = sqlite3;
 
@@ -44,14 +46,18 @@ export const createDBFile = async ({
   await db.run(createCookiesTableQuery);
   await db.close();
 
-  cookiesFileSecondPath && await fsPromises.copyFile(cookiesFilePath, cookiesFileSecondPath).catch(console.log);
+  await ensureDirectoryExists(cookiesFilePath);
+  await ensureDirectoryExists(cookiesFileSecondPath);
+  cookiesFileSecondPath && await fsPromises.copyFile(cookiesFilePath, cookiesFileSecondPath).catch((error) => {
+    console.error('error in copyFile createDBFile', error.message);
+  });
 };
 
 export const getUniqueCookies = async (cookiesArr, cookiesFilePath) => {
   const cookiesInFile = await loadCookiesFromFile(cookiesFilePath);
-  const existingCookieNames = new Set(cookiesInFile.map(c => `${c.name}-${c.value.toString('base64')}`));
+  const existingCookieNames = new Set(cookiesInFile.map(c => `${c.name}-${c.domain}-${c.path}`));
 
-  return cookiesArr.filter(cookie => !existingCookieNames.has(`${cookie.name}-${cookie.value.toString('base64')}`));
+  return cookiesArr.filter(cookie => !existingCookieNames.has(`${cookie.name}-${cookie.domain}-${cookie.path}`));
 };
 
 export const getChunckedInsertValues = (cookiesArr) => {
@@ -108,9 +114,21 @@ export const getChunckedInsertValues = (cookiesArr) => {
   });
 };
 
-export const loadCookiesFromFile = async (filePath) => {
+export const loadCookiesFromFile = async (filePath, isSecondTry = false, profileId, tmpdir) => {
   let db;
   const cookies = [];
+  let secondCookiesFilePath;
+  try {
+    const isNetworkFolder = filePath.includes('Network');
+    secondCookiesFilePath = isNetworkFolder ?
+      join(tmpdir, `gologin_profile_${profileId}`, 'Default', 'Cookies') :
+      join(tmpdir, `gologin_profile_${profileId}`, 'Default', 'Network', 'Cookies');
+  } catch (error) {
+    console.log(error);
+    console.log('error in loadCookiesFromFile', error.message);
+  }
+
+  console.log(1);
 
   try {
     db = await getDB(filePath);
@@ -145,9 +163,16 @@ export const loadCookiesFromFile = async (filePath) => {
       });
     }
   } catch (error) {
-    console.log(error);
+    console.log('error in loadCookiesFromFile', error.message);
+    if (!isSecondTry) {
+      return await loadCookiesFromFile(secondCookiesFilePath, true, profileId, tmpdir);
+    }
   } finally {
     db && await db.close();
+  }
+
+  if (!cookies.length && !isSecondTry) {
+    return loadCookiesFromFile(secondCookiesFilePath, true, profileId, tmpdir);
   }
 
   return cookies;

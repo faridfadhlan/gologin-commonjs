@@ -2,7 +2,8 @@ import { createWriteStream, promises as _promises } from 'fs';
 import { join, sep } from 'path';
 import request from 'requestretry';
 
-import { CHROME_EXTENSIONS_PATH, composeExtractionPromises, USER_EXTENSIONS_PATH } from '../utils/common.js';
+import { CHROME_EXTENSIONS_PATH, composeExtractionPromises, FALLBACK_API_URL, USER_EXTENSIONS_PATH } from '../utils/common.js';
+import { makeRequest } from '../utils/http.js';
 
 const { readdir, readFile, stat, mkdir, copyFile } = _promises;
 
@@ -78,19 +79,17 @@ export class UserExtensionsManager {
       return;
     }
 
-    const extensionsToDownloadPaths = await request.post(`${this.#API_BASE_URL}/extensions/user_chrome_extensions_paths`, {
-      json: true,
-      fullResponse: false,
-      headers: {
-        Authorization: `Bearer ${this.#ACCESS_TOKEN}`,
-        'user-agent': this.#USER_AGENT,
-        'x-two-factor-token': this.#TWO_FA_KEY || '',
-      },
-      body: {
+    const extensionsToDownloadPaths = await makeRequest(`${this.#API_BASE_URL}/extensions/user_chrome_extensions_paths`, {
+      fullResponse: true,
+      json: {
         existedUserChromeExtensions: this.#existedUserExtensions,
         profileId,
         userChromeExtensions,
       },
+      method: 'POST',
+    }, {
+      token: this.#ACCESS_TOKEN,
+      fallbackUrl: `${FALLBACK_API_URL}/extensions/user_chrome_extensions_paths`,
     }) || [];
 
     const extensionsToDownloadPathsFiltered =
