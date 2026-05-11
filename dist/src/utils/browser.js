@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.getIntlProfileConfig = exports.checkAutoLang = void 0;
+exports.securedOrbitaOpts = exports.getIntlProfileConfig = exports.checkAutoLang = void 0;
 const checkAutoLang = (profileData, timezoneCheckResult, autoLang) => {
   if (!autoLang) {
     return checkBrowserLang(profileData);
@@ -101,3 +101,4 @@ const getMainLanguage = langArr => {
   }
   return '';
 };
+const securedOrbitaOpts = exports.securedOrbitaOpts = ['webGpu', 'webgl', 'webglParams', 'webRTC', 'webrtc', 'mediaDevices', 'plugins', 'audioContext', 'canvasMode', 'canvasNoise', 'webgl_noice_enable', 'webglNoiceEnable', 'webgl_noise_enable', 'client_rects_noise_enable', 'webgl_noise_value', 'webglNoiseValue', 'getClientRectsNoice', 'get_client_rects_noise'];

@@ -14,6 +14,7 @@ var _path = require("path");
 var _progress = _interopRequireDefault(require("progress"));
 var _util = _interopRequireDefault(require("util"));
 var _common = require("../utils/common.js");
+var _http = require("../utils/http.js");
 var _browserDownloadManager = _interopRequireDefault(require("./browser-download-manager.js"));
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
 const exec = _util.default.promisify(_child_process.exec);
@@ -129,6 +130,8 @@ class BrowserChecker {
         return `https://orbita-browser-windows.gologin.com/orbita-browser-latest-${majorVersion}.zip`;
       case 'macM1':
         return `https://orbita-browser-mac-arm.gologin.com/orbita-browser-latest-${majorVersion}.tar.gz`;
+      case 'linArm':
+        return `https://orbita-browser-linux-arm.gologin.com/orbita-browser-latest-${majorVersion}.tar.gz`;
       default:
         return `https://orbita-browser-linux.gologin.com/orbita-browser-latest-${majorVersion}.tar.gz`;
     }
@@ -315,20 +318,10 @@ class BrowserChecker {
   }
   getLatestBrowserVersion() {
     const userOs = (0, _common.getOS)();
-    return new Promise(resolve => (0, _https.get)(`${_common.API_URL}/gologin-global-settings/latest-browser-info?os=${userOs}`, {
-      timeout: 15 * 1000,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'gologin-api'
-      }
-    }, res => {
-      res.setEncoding('utf8');
-      let resultResponse = '';
-      res.on('data', data => resultResponse += data);
-      res.on('end', () => {
-        resolve(JSON.parse(resultResponse.trim()));
-      });
-    }).on('error', err => resolve('')));
+    const options = {
+      json: true
+    };
+    return (0, _http.makeRequest)(`${_common.API_URL}/gologin-global-settings/latest-browser-info?os=${userOs}`, options);
   }
   get getOrbitaPath() {
     return this.executableFilePath;

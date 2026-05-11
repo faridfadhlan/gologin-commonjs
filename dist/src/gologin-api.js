@@ -186,7 +186,7 @@ const GologinApi = ({
           token,
           fallbackUrl: `${_common.FALLBACK_API_URL}/users-proxies/geolocation/traffic`
         });
-        const availableTrafficData = availableTraffic;
+        const availableTrafficData = JSON.parse(availableTraffic);
         const availableType = this.getAvailableType(availableTrafficData);
         if (availableType === 'none') {
           throw new Error(trafficLimitMessage);

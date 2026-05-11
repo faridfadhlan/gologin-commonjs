@@ -21,8 +21,8 @@ const {
   copyFile,
   rename
 } = _fs.promises;
-const _filename = (0, _url.fileURLToPath)(require('url').pathToFileURL(__filename).toString());
-const _dirname = (0, _path.dirname)(_filename);
+const _filename = typeof __filename !== 'undefined' ? __filename : process.cwd();
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : (0, _path.dirname)(_filename || process.cwd());
 const FONTS_URL = 'https://fonts.gologin.com/';
 const FONTS_DIR_NAME = 'fonts';
 const HOMEDIR = (0, _os.homedir)();

@@ -1,6 +1,10 @@
 import { get as _get } from 'https';
 import requests from 'requestretry';
 
+import packageJson from '../../package.json' with { type: 'json' };
+
+const { version } = packageJson;
+
 const TIMEZONE_URL = 'https://geo.myip.link';
 
 const createTimeoutPromise = (timeoutMs) => new Promise((_, reject) => {
@@ -29,10 +33,10 @@ const attemptRequest = async (requestUrl, options) => {
   return req.body;
 };
 
-export const makeRequest = async (url, options, internalOptions) => {
+export const makeRequest = async (url, options = {}, internalOptions) => {
   options.headers = {
     ...options.headers,
-    'User-Agent': 'gologin-nodejs-sdk',
+    'User-Agent': `gologin-nodejs-sdk/${version}`,
   };
 
   if (internalOptions?.token) {
@@ -45,10 +49,15 @@ export const makeRequest = async (url, options, internalOptions) => {
   try {
     return await attemptRequest(url, options);
   } catch (error) {
-    if (internalOptions?.fallbackUrl && !error.statusCode) {
-      const fallbackData = await attemptRequest(internalOptions.fallbackUrl, options);
+    if (internalOptions?.fallbackUrl) {
+      try {
+        const fallbackData = await attemptRequest(internalOptions.fallbackUrl, options);
 
-      return fallbackData;
+        return fallbackData;
+      } catch (fallbackError) {
+        // If fallback also fails, attach info and throw original error
+        error.fallbackError = fallbackError;
+      }
     }
 
     throw error;

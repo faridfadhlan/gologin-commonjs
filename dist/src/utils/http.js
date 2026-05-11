@@ -6,7 +6,11 @@ Object.defineProperty(exports, "__esModule", {
 exports.makeRequest = exports.checkSocksProxy = void 0;
 var _https = require("https");
 var _requestretry = _interopRequireDefault(require("requestretry"));
+var _package = _interopRequireDefault(require("../../package.json"));
 function _interopRequireDefault(e) { return e && e.__esModule ? e : { default: e }; }
+const {
+  version
+} = _package.default;
 const TIMEZONE_URL = 'https://geo.myip.link';
 const createTimeoutPromise = timeoutMs => new Promise((_, reject) => {
   setTimeout(() => {
@@ -29,10 +33,10 @@ const attemptRequest = async (requestUrl, options) => {
   }
   return req.body;
 };
-const makeRequest = async (url, options, internalOptions) => {
+const makeRequest = async (url, options = {}, internalOptions) => {
   options.headers = {
     ...options.headers,
-    'User-Agent': 'gologin-nodejs-sdk'
+    'User-Agent': `gologin-nodejs-sdk/${version}`
   };
   if (internalOptions?.token) {
     options.headers = {

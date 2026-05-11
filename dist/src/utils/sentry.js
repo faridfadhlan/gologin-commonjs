@@ -86,14 +86,14 @@ const captureGroupedSentryError = (error, context = {}) => {
       };
       break;
   }
-  Sentry.withScope(scope => {
+  Sentry.captureException(error, scope => {
     scope.setFingerprint(fingerprint);
+    scope.setTransactionName(fingerprint);
     scope.setTags(tags);
     scope.setContext('errorDetails', {
       originalMessage: errorMessage,
       ...context
     });
-    Sentry.captureException(error);
   });
 };
 exports.captureGroupedSentryError = captureGroupedSentryError;

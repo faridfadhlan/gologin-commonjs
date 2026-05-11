@@ -30,20 +30,20 @@ export class GoLogin {
     restoreLastSession: any;
     processSpawned: import("child_process").ChildProcess;
     processKillTimeout: number;
-    browserMajorVersion: number;
-    newProxyOrbbitaMajorVersion: number;
+    browserMajorVersion: any;
+    newProxyOrbitaMajorVersion: number;
     proxyCheckTimeout: any;
     proxyCheckAttempts: any;
-    browserLatestMajorVersion: number;
     profile_zip_path: string;
     bookmarksFilePath: string;
     checkBrowser(majorVersion: any): Promise<void>;
     checkAndDownloadBrowserByOpts(opts?: {}): Promise<void>;
     getLatestBrowserVersion(): Promise<number>;
-    latestBrowserMajorVersion: number;
     setProfileId(profile_id: any): Promise<void>;
     cookiesFilePath: string;
     getProfile(profile_id: any): Promise<any>;
+    requestOrbitaProfileParamsToken(profileId: any): Promise<any>;
+    composeClientGologinOpts(gologinSettings: any): any;
     getProfileS3(): Promise<"" | Buffer>;
     postFile(fileName: any, fileBuff: any): Promise<void>;
     getGologinPreferences(profileData: any): {
@@ -135,7 +135,6 @@ export class GoLogin {
     downloadProfileAndExtract(profile: any, local: any): Promise<void>;
     createZeroProfile(createCookiesTableQuery: any): Promise<void>;
     createStartup(local?: boolean): Promise<string>;
-    language: any;
     resolution: {
         width: number;
         height: number;

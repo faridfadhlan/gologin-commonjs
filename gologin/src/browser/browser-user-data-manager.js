@@ -10,8 +10,8 @@ import { makeRequest } from '../utils/http.js';
 
 const { access, readFile, writeFile, mkdir, readdir, copyFile, rename } = _promises;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = typeof __filename !== 'undefined' ? __filename : fileURLToPath(import.meta.url);
+const __dirname = typeof __dirname !== 'undefined' ? __dirname : dirname(__filename || process.cwd());
 
 const FONTS_URL = 'https://fonts.gologin.com/';
 const FONTS_DIR_NAME = 'fonts';

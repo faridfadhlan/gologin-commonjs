@@ -26,11 +26,12 @@ import {
 } from './cookies/cookies-manager.js';
 import ExtensionsManager from './extensions/extensions-manager.js';
 import { archiveProfile } from './profile/profile-archiver.js';
-import { checkAutoLang, getIntlProfileConfig } from './utils/browser.js';
+import { checkAutoLang, getIntlProfileConfig, securedOrbitaOpts } from './utils/browser.js';
 import { API_URL, ensureDirectoryExists, FALLBACK_API_URL, getOsAdvanced } from './utils/common.js';
 import { STORAGE_GATEWAY_BASE_URL } from './utils/constants.js';
 import { get, isPortReachable } from './utils/utils.js';
 export { exitAll, GologinApi } from './gologin-api.js';
+import { getProfileChromeExtensions } from './extensions/get-extensions.js';
 import { checkSocksProxy, makeRequest } from './utils/http.js';
 import { captureGroupedSentryError } from './utils/sentry.js';
 import { zeroProfileBookmarks } from './utils/zero-profile-bookmarks.js';
@@ -79,18 +80,17 @@ export class GoLogin {
     this.restoreLastSession = options.restoreLastSession || true;
     this.processSpawned = null;
     this.processKillTimeout = 1 * 1000;
-    this.browserMajorVersion = 0;
-    this.newProxyOrbbitaMajorVersion = 135;
+    this.browserMajorVersion = options.browserMajorVersion || 0;
+    this.newProxyOrbitaMajorVersion = 135;
     this.proxyCheckTimeout = options.proxyCheckTimeout || 13 * 1000;
     this.proxyCheckAttempts = options.proxyCheckAttempts || 3;
-    this.browserLatestMajorVersion = 137;
 
     if (process.env.DISABLE_TELEMETRY !== 'true') {
       Sentry.init({
         dsn: 'https://a13d5939a60ae4f6583e228597f1f2a0@sentry-new.amzn.pro/24',
         tracesSampleRate: 1.0,
         defaultIntegrations: false,
-        release: process.env.npm_package_version || '2.1.33',
+        release: process.env.npm_package_version || '2.1.34',
       });
     }
 
@@ -143,10 +143,8 @@ export class GoLogin {
   async getLatestBrowserVersion() {
     const { latestVersion: browserLatestVersion } = await this.browserChecker.getLatestBrowserVersion();
     const [latestBrowserMajorVersion] = browserLatestVersion.split('.');
-    const latestVersionNumber = Number(latestBrowserMajorVersion);
-    this.latestBrowserMajorVersion = latestVersionNumber;
 
-    return latestVersionNumber;
+    return Number(latestBrowserMajorVersion);
   }
 
   async setProfileId(profile_id) {
@@ -164,6 +162,22 @@ export class GoLogin {
     }, { token: this.access_token, fallbackUrl: `${FALLBACK_API_URL}/browser/features/${id}/info-for-run` });
 
     return JSON.parse(profileResponse);
+  }
+
+  async requestOrbitaProfileParamsToken(profileId) {
+    const tokenRes = await makeRequest(`${API_URL}/browser/features/${profileId}/profile-params-for-orbita-token`, {
+      method: 'GET',
+    }, { token: this.access_token, fallbackUrl: `${FALLBACK_API_URL}/browser/features/${profileId}/profile-params-for-orbita-token` });
+
+    return JSON.parse(tokenRes);
+  }
+
+  composeClientGologinOpts(gologinSettings) {
+    const clonedOpts = structuredClone(gologinSettings);
+
+    securedOrbitaOpts.forEach((field) => delete clonedOpts[field]);
+
+    return clonedOpts;
   }
 
   async getProfileS3() {
@@ -314,7 +328,7 @@ export class GoLogin {
       },
     };
 
-    if (this.browserMajorVersion >= this.newProxyOrbbitaMajorVersion && profileData.proxy?.mode !== 'none') {
+    if (this.browserMajorVersion >= this.newProxyOrbitaMajorVersion && profileData.proxy?.mode !== 'none') {
       let proxyServer = `${profileData.proxy.mode}://`;
       if (profileData.proxy.username) {
         const encodedUsername = encodeURIComponent(profileData.proxy.username || '');
@@ -461,6 +475,29 @@ export class GoLogin {
         this.browserMajorVersion = latestVersionNumber;
         await this.checkBrowser(latestVersionNumber);
       }
+    } else if (!this.browserMajorVersion) {
+      const { userAgent } = profile.navigator;
+      const [browserMajorVersion] = userAgent.split('Chrome/')[1].split('.');
+      this.browserMajorVersion = Number(browserMajorVersion);
+
+      let executableDir = join(this.executablePath, '..');
+      if (OS_PLATFORM === 'darwin') {
+        executableDir = join(this.executablePath, '..', '..', '..');
+      }
+
+      const versionFilePath = join(executableDir, 'version');
+      try {
+        await access(versionFilePath);
+        const versionContent = await readFile(versionFilePath, 'utf8');
+        const versionFromFile = versionContent.trim();
+        const isValidVersion = /^\d+\.\d+\.\d+/.test(versionFromFile);
+        if (isValidVersion) {
+          const [browserMajorVersion] = isValidVersion.split('.');
+          this.browserMajorVersion = Number(browserMajorVersion);
+        }
+      } catch (error) {
+        console.warn('Error reading version file:', error);
+      }
     }
 
     const { navigator = {}, fonts, os: profileOs } = profile;
@@ -475,10 +512,8 @@ export class GoLogin {
 
     const {
       resolution = '1920x1080',
-      language = 'en-US,en;q=0.9',
     } = navigator;
 
-    this.language = language;
     const [screenWidth, screenHeight] = resolution.split('x');
     this.resolution = {
       width: parseInt(screenWidth, 10),
@@ -625,7 +660,7 @@ export class GoLogin {
       }
     }
 
-    if (preferences.gologin == null) {
+    if (preferences.gologin === null) {
       preferences.gologin = {};
     }
 
@@ -633,17 +668,33 @@ export class GoLogin {
     const checkAutoLangResult = checkAutoLang(gologin, this._tz, profile.autoLang);
     const intlConfig = getIntlProfileConfig(profile, this._tz, profile.autoLang);
 
-    await writeFile(join(profilePath, 'orbita.config'), JSON.stringify({ intl: intlConfig }, null, '\t'), { encoding: 'utf-8' }).catch(console.log);
+    let orbitaParamsToken = '';
+    if (profile.securedOrbitaVersion && (this.browserMajorVersion >= profile.securedOrbitaVersion)) {
+      const tokenRes = await this.requestOrbitaProfileParamsToken(this.profile_id);
+
+      orbitaParamsToken = tokenRes.token;
+    }
 
     this.browserLang = isMAC ? 'en-US' : checkAutoLangResult;
     const prefsToWrite = Object.assign(preferences, { gologin });
-    if (this.browserMajorVersion >= this.newProxyOrbbitaMajorVersion && this.proxy?.mode !== 'none') {
+    if (this.browserMajorVersion >= this.newProxyOrbitaMajorVersion && this.proxy?.mode !== 'none') {
       prefsToWrite.proxy = {
         mode: 'fixed_servers',
         server: gologin.proxy.server,
       };
     }
 
+    const clientGologinOpts = this.composeClientGologinOpts(prefsToWrite.gologin);
+    const orbitaConfig = {
+      intl: intlConfig,
+      gologin: {
+        api_domain: API_URL,
+        profile_token: orbitaParamsToken,
+        ...clientGologinOpts,
+      },
+    };
+
+    await writeFile(join(profilePath, 'orbita.config'), JSON.stringify(orbitaConfig, null, '\t'), { encoding: 'utf-8' }).catch(console.log);
     await writeFile(join(profilePath, 'Default', 'Preferences'), JSON.stringify(prefsToWrite));
 
     const bookmarksParsedData = await getCurrentProfileBookmarks(this.bookmarksFilePath);
@@ -945,11 +996,11 @@ export class GoLogin {
       }
 
       if (proxy) {
-        const hr_rules = `"MAP * 0.0.0.0 , EXCLUDE ${proxy_host}"`;
+        const hr_rules = `"MAP * 0.0.0.0 , EXCLUDE ${proxy_host} , EXCLUDE api.gologin.com"`;
         params.push(`--host-resolver-rules=${hr_rules}`);
       }
 
-      if (proxy && Number(this.browserMajorVersion) < this.newProxyOrbbitaMajorVersion) {
+      if (proxy && Number(this.browserMajorVersion) < this.newProxyOrbitaMajorVersion) {
         params.push(`--proxy-server=${proxy}`);
       }
 
@@ -1029,10 +1080,12 @@ export class GoLogin {
   async uploadProfileDataToServer() {
     const cookies = await loadCookiesFromFile(this.cookiesFilePath, false, this.profile_id, this.tmpdir);
     const bookmarks = await getCurrentProfileBookmarks(this.bookmarksFilePath);
-
+    const profilePreferencesPath = join(this.profilePath(), 'Default', 'Preferences');
+    const extensions = await getProfileChromeExtensions(profilePreferencesPath).catch(() => null);
     const body = {
       cookies,
-      bookmarks,
+      bookmarks: bookmarks.roots,
+      extensionsIds: extensions,
       isCookiesEncrypted: true,
       isStorageGateway: true,
     };
@@ -1176,14 +1229,6 @@ export class GoLogin {
 
     const fingerprint = await this.getRandomFingerprint(options);
     debug('fingerprint=', fingerprint);
-
-    if (fingerprint.statusCode === 500) {
-      throw new Error('no valid random fingerprint check os param');
-    }
-
-    if (fingerprint.statusCode === 401) {
-      throw new Error('invalid token');
-    }
 
     const { navigator, fonts, webGLMetadata, webRTC } = fingerprint;
     let deviceMemory = navigator.deviceMemory || 2;
@@ -1505,10 +1550,6 @@ export class GoLogin {
     const profilesResponse = await makeRequest(`${API_URL}/browser/v2`, {
       method: 'GET',
     }, { token: this.access_token, fallbackUrl: `${FALLBACK_API_URL}/browser/v2` });
-
-    if (profilesResponse.statusCode !== 200) {
-      throw new Error('Gologin /browser response error');
-    }
 
     return JSON.parse(profilesResponse);
   }

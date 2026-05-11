@@ -1,13 +1,14 @@
 {
   "plugins": [
+    "@babel/plugin-syntax-import-attributes",
+    [
+      "babel-plugin-transform-import-meta"
+    ],
     [
       "@babel/plugin-transform-modules-commonjs",
       {
         "importInterop": "babel"
       }
-    ],
-    [
-      "babel-plugin-transform-import-meta"
     ]
   ],
   "ignore": [
